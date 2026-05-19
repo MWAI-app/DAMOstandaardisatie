@@ -1888,8 +1888,8 @@ const TYPE_COLORS = {
 // ─── Subcomponenten ───────────────────────────────────────────────────────────
 
 function StatRow({ data }) {
-  const totaal = data.reduce((s, o) => s + o.count, 0);
-  const bulkCount = data.filter(o => o.bulk).reduce((s, o) => s + o.count, 0);
+  const totaal = data.reduce((s, o) => s + (o.count || 0), 0);
+  const bulkCount = data.filter(o => o.bulk).reduce((s, o) => s + (o.count || 0), 0);
   const typeCount = data.length;
   const bulkTypes = data.filter(o => o.bulk).length;
 
@@ -2488,7 +2488,7 @@ function DecompositieTab() {
             <span style={{ color: TYPE_COLORS[o.id], marginRight: 6 }}>▸</span>
             {o.label}
             <span style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", float: "right" }}>
-              {o.count}
+              {o.count ?? "—"}
             </span>
           </div>
         ))}
@@ -2500,7 +2500,7 @@ function DecompositieTab() {
         <div style={{ background: "var(--panel)", border: "1px solid var(--border)", padding: "16px 20px", marginBottom: 16, display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: TYPE_COLORS[selected] }}>{obj?.label}</div>
           <div style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--muted)" }}>
-            DAMO 2.3 · IMWA · {obj?.count} objecten in AGV
+            DAMO 2.3 · IMWA · {obj?.count ?? "?"} objecten in AGV
           </div>
           <div style={{ marginLeft: "auto", display: "flex", gap: 16 }}>
             <div style={{ textAlign: "right" }}>
@@ -2620,14 +2620,14 @@ function AnalyseTab() {
             <div className="chart-title">// Objecttype verdeling</div>
             <div className="chart-sub">Aantallen per IMWA-type</div>
             {OBJECTTYPEN.map(o => {
-              const pct = Math.round((o.count / 6645) * 100);
+              const pct = o.count ? Math.round((o.count / 6645) * 100) : 0;
               return (
                 <div className="bar-item" key={o.id}>
                   <div className="bar-label">{o.label}</div>
                   <div className="bar-track">
                     <div className="bar-fill" style={{ width: `${pct}%`, background: TYPE_COLORS[o.id] }} />
                   </div>
-                  <div className="bar-value">{o.count}</div>
+                  <div className="bar-value">{o.count ?? "—"}</div>
                 </div>
               );
             })}
