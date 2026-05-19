@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AGV Kunstwerken Standaardisatie</title>
+  <!-- Leaflet.js -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <!-- React & ReactDOM via CDN -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -1612,23 +1615,194 @@ function StatRow({ data }) {
   );
 }
 
-function KaartTab({ objecten, typeFilter, setTypeFilter }) {
-  const [tooltip, setTooltip] = useState(null);
-  const [selected, setSelected] = useState(null);
+// ─── PDOK Configuratie ────────────────────────────────────────────────────────
+const BRONHOUDERS = {
+  "W0155": { label: "Amstel, Gooi en Vecht (AGV)", center: [52.30, 4.95], zoom: 10 },
+  "W0616": { label: "Hoogheemraadschap van Rijnland", center: [52.15, 4.50], zoom: 10 },
+  "W0636": { label: "De Stichtse Rijnlanden", center: [52.05, 5.10], zoom: 10 },
+};
 
-  const gefilterd = typeFilter === "all"
-    ? objecten
-    : objecten.filter(o => o.type === typeFilter);
+const PDOK_URL = "https://api.pdok.nl/hwh/waterschappen-kunstwerken-imwa/ogc/v1/collections/kunstwerk/items";
+
+const IMWA_TYPE_MAP = {
+  "stuw": "stuw", "gemaal": "gemaal", "duiker": "duiker",
+  "brug": "brug", "sluis": "sluis", "afsluitmiddel": "afsluitmiddel",
+  "vispassage": "vispassage", "hevel": "hevel", "aquaduct": "aquaduct",
+  "bodemval": "bodemval", "coupure": "coupure", "put": "put",
+  "sifon": "sifon", "vastedam": "vastedam", "voorde": "voorde",
+  "vuilvang": "vuilvang", "zandvang": "zandvang",
+};
+
+function detectType(feature) {
+  const props = feature.properties || {};
+  const typeRaw = (props.typeKunstwerk || props.type || props.objecttype || "").toLowerCase();
+  for (const key of Object.keys(IMWA_TYPE_MAP)) {
+    if (typeRaw.includes(key)) return key;
+  }
+  return "overig";
+}
+
+function LeafletKaart({ typeFilter, bronhouder, setBronhouder }) {
+  const mapRef = useRef(null);
+  const leafletMap = useRef(null);
+  const markersLayer = useRef(null);
+  const [status, setStatus] = useState("idle"); // idle | loading | success | error
+  const [stats, setStats] = useState({});
+  const [selected, setSelected] = useState(null);
+  const [totaal, setTotaal] = useState(0);
+
+  const bron = BRONHOUDERS[bronhouder];
+
+  // Initialiseer Leaflet kaart
+  useEffect(() => {
+    if (leafletMap.current) return;
+    leafletMap.current = L.map(mapRef.current, {
+      center: bron.center,
+      zoom: bron.zoom,
+      zoomControl: true,
+    });
+
+    // Donkere tile laag (CartoDB Dark Matter)
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+      subdomains: "abcd",
+      maxZoom: 19,
+    }).addTo(leafletMap.current);
+
+    markersLayer.current = L.layerGroup().addTo(leafletMap.current);
+  }, []);
+
+  // Haal PDOK data op
+  useEffect(() => {
+    if (!leafletMap.current) return;
+    fetchPDOK();
+  }, [bronhouder, typeFilter]);
+
+  async function fetchPDOK() {
+    setStatus("loading");
+    setSelected(null);
+    markersLayer.current.clearLayers();
+
+    const params = new URLSearchParams({
+      f: "json",
+      limit: 1000,
+      "filter-lang": "cql2-text",
+      filter: `bronhouder = '${bronhouder}'`,
+    });
+
+    // Als typefilter actief: voeg toe aan filter
+    const filterStr = typeFilter !== "all"
+      ? `bronhouder = '${bronhouder}' AND typeKunstwerk = '${typeFilter}'`
+      : `bronhouder = '${bronhouder}'`;
+
+    const url = `${PDOK_URL}?f=json&limit=2000&filter-lang=cql2-text&filter=${encodeURIComponent(filterStr)}`;
+
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      const features = data.features || [];
+
+      // Centreer kaart op bronhouder
+      leafletMap.current.setView(bron.center, bron.zoom);
+
+      // Statistieken bijhouden
+      const statsTmp = {};
+      let geldig = 0;
+
+      features.forEach(f => {
+        if (!f.geometry) return;
+        const coords = f.geometry.coordinates;
+        if (!coords || coords.length < 2) return;
+
+        const type = detectType(f);
+        statsTmp[type] = (statsTmp[type] || 0) + 1;
+        geldig++;
+
+        const kleur = TYPE_COLORS[type] || "#888";
+        const props = f.properties || {};
+        const naam = props.naam || props.name || props.identificatie || "Onbekend";
+
+        // Maak marker
+        const marker = L.circleMarker([coords[1], coords[0]], {
+          radius: 6,
+          fillColor: kleur,
+          color: "#0b1220",
+          weight: 1.5,
+          opacity: 1,
+          fillOpacity: 0.85,
+        });
+
+        marker.on("click", () => {
+          setSelected({ naam, type, props, coords });
+        });
+
+        marker.bindTooltip(`
+          <div style="font-family:monospace;font-size:11px;background:#111c2e;color:#d0e4f7;border:1px solid #1e3a5f;padding:6px 10px">
+            <b style="color:${kleur}">${naam}</b><br/>
+            Type: ${type}<br/>
+            Bronhouder: ${bronhouder}
+          </div>
+        `, { className: "leaflet-tooltip-damo", sticky: true });
+
+        markersLayer.current.addLayer(marker);
+      });
+
+      setStats(statsTmp);
+      setTotaal(geldig);
+      setStatus("success");
+    } catch (err) {
+      console.error("PDOK fout:", err);
+      setStatus("error");
+    }
+  }
 
   return (
     <div>
-      <StatRow data={OBJECTTYPEN} />
+      {/* Stat rij */}
+      <div className="stat-row">
+        <div className="stat-card">
+          <div className="stat-num" style={{ fontSize: 22 }}>{totaal.toLocaleString("nl")}</div>
+          <div className="stat-label">Objecten geladen via PDOK</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-num" style={{ fontSize: 22 }}>{Object.keys(stats).length}</div>
+          <div className="stat-label">Objecttypen gevonden</div>
+        </div>
+        <div className="stat-card" style={{ gridColumn: "span 2" }}>
+          <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--accent)", letterSpacing: 2, marginBottom: 4 }}>
+            // DATABRON
+          </div>
+          <div style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--text)" }}>
+            PDOK · Waterschappen Kunstwerken IMWA
+          </div>
+          <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", marginTop: 2 }}>
+            Bronhouder: <span style={{ color: "var(--accent)" }}>{bronhouder}</span> — {bron.label}
+          </div>
+          <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)" }}>
+            api.pdok.nl/hwh/waterschappen-kunstwerken-imwa/ogc/v1
+          </div>
+        </div>
+      </div>
+
       <div className="map-layout">
+        {/* Sidebar */}
         <div className="sidebar">
-          <div className="sidebar-title">// Filters</div>
+          <div className="sidebar-title">// Databron</div>
           <div className="filter-group">
-            <div className="filter-label">OBJECTTYPE</div>
-            <select className="filter-select" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+            <div className="filter-label">BRONHOUDER (WATERSCHAP)</div>
+            <select className="filter-select" value={bronhouder}
+              onChange={e => { setBronhouder(e.target.value); }}>
+              {Object.entries(BRONHOUDERS).map(([code, info]) => (
+                <option key={code} value={code}>{code} – {info.label.split(" (")[0]}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group" style={{ marginTop: 12 }}>
+            <div className="filter-label">OBJECTTYPE (IMWA)</div>
+            <select className="filter-select" value={typeFilter}
+              onChange={e => { /* handled by parent */ }}>
               <option value="all">Alle typen</option>
               {OBJECTTYPEN.map(o => (
                 <option key={o.id} value={o.id}>{o.label}</option>
@@ -1638,127 +1812,114 @@ function KaartTab({ objecten, typeFilter, setTypeFilter }) {
 
           <div style={{ marginTop: 16 }}>
             <div className="sidebar-title">// Legenda</div>
-            {OBJECTTYPEN.slice(0, 6).map(o => (
-              <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <div style={{ width: 10, height: 10, borderRadius: "50%", background: TYPE_COLORS[o.id], flexShrink: 0 }} />
-                <span style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--muted)" }}>{o.label}</span>
-                <span style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--accent)", marginLeft: "auto" }}>{o.count}</span>
+            {Object.entries(stats).sort((a,b) => b[1]-a[1]).map(([type, count]) => (
+              <div key={type} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <div style={{ width: 10, height: 10, borderRadius: "50%",
+                  background: TYPE_COLORS[type] || "#888", flexShrink: 0 }} />
+                <span style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--muted)" }}>{type}</span>
+                <span style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--accent)", marginLeft: "auto" }}>{count}</span>
               </div>
             ))}
           </div>
 
-          <div style={{ marginTop: 16 }}>
-            <div className="sidebar-title">// Bulk status</div>
-            <div style={{ display: "flex", gap: 8, flexDirection: "column" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 10, height: 10, border: "2px solid var(--bulk)", borderRadius: "50%" }} />
-                <span style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--muted)" }}>Bulk object</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 10, height: 10, border: "2px solid var(--nobulk)", borderRadius: "50%" }} />
-                <span style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--muted)" }}>Niet bulk</span>
-              </div>
-            </div>
-          </div>
-
+          {/* Status indicator */}
           <div style={{ marginTop: "auto", paddingTop: 16, borderTop: "1px solid var(--border)" }}>
-            <div className="loading">
-              <div className="spinner" />
-              PDOK live data
-            </div>
+            {status === "loading" && (
+              <div className="loading"><div className="spinner" />Data ophalen van PDOK...</div>
+            )}
+            {status === "success" && (
+              <div style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--accent2)" }}>
+                ✓ {totaal} objecten geladen
+              </div>
+            )}
+            {status === "error" && (
+              <div style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--danger)" }}>
+                ✗ PDOK niet bereikbaar
+              </div>
+            )}
             <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", marginTop: 4 }}>
-              AGV beheergebied<br />
-              OGC API · IMWA Kunstwerken
+              Kaart: CartoDB Dark Matter<br/>
+              Data: PDOK OGC API Features
             </div>
           </div>
         </div>
 
-        <div className="map-container">
-          <div className="map-grid" />
-          {/* SVG kaart — gesimuleerde punten in AGV-gebied */}
-          <svg className="map-svg" viewBox="0 0 600 520">
-            {/* Waterlijnen AGV-stijl */}
-            <path d="M 80 260 Q 200 220 320 240 Q 440 260 560 230" stroke="rgba(0,200,255,0.15)" strokeWidth="3" fill="none" />
-            <path d="M 120 380 Q 240 360 360 380 Q 480 400 560 370" stroke="rgba(0,200,255,0.1)" strokeWidth="2" fill="none" />
-            <path d="M 200 80 Q 220 200 240 300 Q 260 380 280 460" stroke="rgba(0,200,255,0.12)" strokeWidth="2" fill="none" />
-            <path d="M 350 80 Q 370 180 380 280 Q 390 360 400 460" stroke="rgba(0,200,255,0.1)" strokeWidth="1.5" fill="none" />
+        {/* Leaflet kaart */}
+        <div style={{ position: "relative" }}>
+          <div ref={mapRef} style={{ height: 520, border: "1px solid var(--border)" }} />
 
-            {/* AGV-grens gesimuleerd */}
-            <path d="M 80 80 L 520 80 L 560 200 L 540 420 L 420 480 L 120 460 L 60 320 L 80 80"
-              stroke="rgba(0,200,255,0.2)" strokeWidth="1" fill="rgba(0,200,255,0.02)"
-              strokeDasharray="6 4" />
-
-            {/* Objectpunten */}
-            {gefilterd.map(obj => (
-              <g key={obj.id}>
-                <circle
-                  cx={obj.x} cy={obj.y} r={5}
-                  fill={TYPE_COLORS[obj.type]}
-                  stroke={obj.bulk ? "var(--bulk)" : "var(--nobulk)"}
-                  strokeWidth={2}
-                  opacity={0.85}
-                  className="map-point"
-                  onMouseEnter={e => setTooltip({ obj, mx: e.clientX, my: e.clientY })}
-                  onMouseLeave={() => setTooltip(null)}
-                  onClick={() => setSelected(selected?.id === obj.id ? null : obj)}
-                />
-                {selected?.id === obj.id && (
-                  <circle cx={obj.x} cy={obj.y} r={10}
-                    fill="none" stroke="var(--accent)" strokeWidth={1.5}
-                    strokeDasharray="3 2" />
-                )}
-              </g>
-            ))}
-
-            {/* Labels */}
-            <text x={88} y={74} fill="rgba(0,200,255,0.4)" fontSize={9} fontFamily="DM Mono" letterSpacing={2}>AGV BEHEERGEBIED</text>
-          </svg>
-
-          {tooltip && (
-            <div className="map-tooltip" style={{
-              left: tooltip.mx - 160,
-              top: tooltip.my - 120,
-              position: "fixed"
-            }}>
-              <div className="map-tooltip-title">{tooltip.obj.name}</div>
-              <div className="map-tooltip-row">
-                <span>Type</span>
-                <span className="map-tooltip-val">{tooltip.obj.type}</span>
-              </div>
-              <div className="map-tooltip-row">
-                <span>Context</span>
-                <span className="map-tooltip-val">{tooltip.obj.context}</span>
-              </div>
-              <div className="map-tooltip-row">
-                <span>RAMS</span>
-                <span className="map-tooltip-val">{tooltip.obj.rams}</span>
-              </div>
-              <div className="map-tooltip-row">
-                <span>Bulk</span>
-                <span className="map-tooltip-val" style={{ color: tooltip.obj.bulk ? "var(--bulk)" : "var(--nobulk)" }}>
-                  {tooltip.obj.bulk ? "Ja" : "Nee"}
-                </span>
-              </div>
-            </div>
-          )}
+          {/* PDOK bronvermelding overlay */}
+          <div style={{
+            position: "absolute", bottom: 8, left: 8, zIndex: 1000,
+            background: "rgba(11,18,32,0.85)", border: "1px solid var(--border)",
+            padding: "4px 10px", fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)",
+          }}>
+            Bron: PDOK · Gegevensknooppunt Waterschappen · Bronhouder {bronhouder} · IMWA Kunstwerken
+          </div>
         </div>
       </div>
 
+      {/* Detail panel bij klik */}
       {selected && (
         <div className="detail-panel">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ fontFamily: "DM Mono", fontSize: 11, color: "var(--accent)", letterSpacing: 2 }}>
-              // OBJECT DETAIL
+              // OBJECT DETAIL · PDOK LIVE
             </div>
-            <button onClick={() => setSelected(null)} style={{ background: "none", border: "1px solid var(--border)", color: "var(--muted)", padding: "2px 8px", cursor: "pointer", fontFamily: "DM Mono", fontSize: 10 }}>
-              SLUIT
-            </button>
+            <button onClick={() => setSelected(null)} style={{
+              background: "none", border: "1px solid var(--border)",
+              color: "var(--muted)", padding: "2px 8px", cursor: "pointer",
+              fontFamily: "DM Mono", fontSize: 10
+            }}>SLUIT</button>
           </div>
-          <div className="detail-grid">
+          <div className="detail-grid" style={{ marginTop: 12 }}>
             <div className="detail-item">
               <div className="detail-key">Naam</div>
-              <div className="detail-val">{selected.name}</div>
+              <div className="detail-val">{selected.naam}</div>
             </div>
+            <div className="detail-item">
+              <div className="detail-key">Type (IMWA)</div>
+              <div className="detail-val" style={{ color: TYPE_COLORS[selected.type] || "#888" }}>
+                {selected.type}
+              </div>
+            </div>
+            <div className="detail-item">
+              <div className="detail-key">Bronhouder</div>
+              <div className="detail-val">{bronhouder} · {bron.label}</div>
+            </div>
+            <div className="detail-item">
+              <div className="detail-key">Coördinaten</div>
+              <div className="detail-val" style={{ fontFamily: "DM Mono", fontSize: 11 }}>
+                {selected.coords[1].toFixed(5)}, {selected.coords[0].toFixed(5)}
+              </div>
+            </div>
+            <div className="detail-item">
+              <div className="detail-key">Identificatie</div>
+              <div className="detail-val" style={{ fontFamily: "DM Mono", fontSize: 10, wordBreak: "break-all" }}>
+                {selected.props.identificatie || selected.props.id || "—"}
+              </div>
+            </div>
+            <div className="detail-item">
+              <div className="detail-key">Databron</div>
+              <div className="detail-val"><span className="tag func">PDOK · IMWA 2.6</span></div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function KaartTab({ typeFilter, setTypeFilter }) {
+  const [bronhouder, setBronhouder] = useState("W0155");
+  return (
+    <LeafletKaart
+      typeFilter={typeFilter}
+      bronhouder={bronhouder}
+      setBronhouder={setBronhouder}
+    />
+  );
+}
             <div className="detail-item">
               <div className="detail-key">Type (IMWA)</div>
               <div className="detail-val" style={{ color: TYPE_COLORS[selected.type] }}>{selected.type}</div>
@@ -2264,7 +2425,7 @@ function App() {
       </div>
 
       <div className="main">
-        {tab === "kaart" && <KaartTab objecten={KAART_OBJECTEN} typeFilter={typeFilter} setTypeFilter={setTypeFilter} />}
+        {tab === "kaart" && <KaartTab typeFilter={typeFilter} setTypeFilter={setTypeFilter} />}
         {tab === "decompositie" && <DecompositieTab />}
         {tab === "analyse" && <AnalyseTab />}
       </div>
