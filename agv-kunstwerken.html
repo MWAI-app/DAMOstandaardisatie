@@ -4,23 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AGV Kunstwerken Standaardisatie</title>
-  <!-- Leaflet.js -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- React & ReactDOM via CDN -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <!-- Babel voor JSX transformatie in browser -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
-
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-
-// ─── Kleurpalet & stijl ───────────────────────────────────────────────────────
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap');
 
@@ -414,42 +408,62 @@ const CSS = `
   .map-tooltip-val { color: var(--text); }
 `;
 
-// ─── Demo data (realistisch voor AGV-gebied) ─────────────────────────────────
+
+// ─── Objecttypen (aantallen worden live opgehaald via PDOK) ──────────────────
 const OBJECTTYPEN = [
-  { id: "stuw",         label: "Stuw",         count: 847,  bulk: true,  pdokCollectie: "stuw" },
-  { id: "gemaal",       label: "Gemaal",       count: 124,  bulk: false, pdokCollectie: "gemaal" },
-  { id: "duiker",       label: "Duiker",       count: 3241, bulk: true,  pdokCollectie: "duiker" },
-  { id: "sifon",        label: "Sifon",        count: null, bulk: false, pdokCollectie: "sifon" },
-  { id: "hevel",        label: "Hevel",        count: null, bulk: false, pdokCollectie: "hevel" },
-  { id: "brug",         label: "Brug",         count: 412,  bulk: true,  pdokCollectie: "brug" },
-  { id: "sluis",        label: "Sluis",        count: 38,   bulk: false, pdokCollectie: "sluis" },
-  { id: "afsluitmiddel",label: "Afsluitmiddel",count: 1893, bulk: true,  pdokCollectie: "afsluitmiddel" },
-  { id: "vispassage",   label: "Vispassage",   count: 23,   bulk: false, pdokCollectie: "vispassage" },
-  { id: "vastedam",    label: "Vaste Dam",    count: null, bulk: false, pdokCollectie: "vastedam" },
+  { id: "stuw",         label: "Stuw",         count: null, bulk: true,  pdokCollectie: "stuw" },
+  { id: "gemaal",       label: "Gemaal",        count: null, bulk: false, pdokCollectie: "gemaal" },
+  { id: "duiker",       label: "Duiker",        count: null, bulk: true,  pdokCollectie: "duiker" },
+  { id: "sifon",        label: "Sifon",         count: null, bulk: false, pdokCollectie: "sifon" },
+  { id: "hevel",        label: "Hevel",         count: null, bulk: false, pdokCollectie: "hevel" },
+  { id: "brug",         label: "Brug",          count: null, bulk: true,  pdokCollectie: "brug" },
+  { id: "sluis",        label: "Sluis",         count: null, bulk: false, pdokCollectie: "sluis" },
+  { id: "afsluitmiddel",label: "Afsluitmiddel", count: null, bulk: true,  pdokCollectie: "afsluitmiddel" },
+  { id: "vispassage",   label: "Vispassage",    count: null, bulk: false, pdokCollectie: "vispassage" },
+  { id: "vastedam",     label: "Vaste Dam",     count: null, bulk: false, pdokCollectie: "vastedam" },
 ];
 
-const KAART_OBJECTEN = [
-  { id: 1, type: "stuw", name: "Stuw Amstelveenseweg", x: 245, y: 180, context: "woongebied", rams: "kritisch", bulk: true },
-  { id: 2, type: "stuw", name: "Stuw Bovenkerkerpolder", x: 310, y: 240, context: "boerenland", rams: "normaal", bulk: true },
-  { id: 3, type: "gemaal", name: "Gemaal De Oude Tocht", x: 180, y: 310, context: "afgelegen", rams: "kritisch", bulk: false },
-  { id: 4, type: "duiker", name: "Duiker N522", x: 420, y: 195, context: "boerenland", rams: "normaal", bulk: true },
-  { id: 5, type: "duiker", name: "Duiker Ronde Hoep", x: 380, y: 290, context: "broedgebied", rams: "laag", bulk: true },
-  { id: 6, type: "sluis", name: "Sluis Ouderkerk", x: 290, y: 140, context: "woongebied", rams: "kritisch", bulk: false },
-  { id: 7, type: "brug", name: "Brug Amsteldijk", x: 220, y: 220, context: "voetgangersgebied", rams: "normaal", bulk: true },
-  { id: 8, type: "stuw", name: "Stuw Waver", x: 460, y: 320, context: "boerenland", rams: "normaal", bulk: true },
-  { id: 9, type: "vispassage", name: "Vispassage Amstel", x: 270, y: 175, context: "broedgebied", rams: "laag", bulk: false },
-  { id: 10, type: "duiker", name: "Duiker Groot Mijdrecht", x: 150, y: 380, context: "boerenland", rams: "laag", bulk: true },
-  { id: 11, type: "afsluitmiddel", name: "Schuif Ringvaart", x: 340, y: 160, context: "woongebied", rams: "normaal", bulk: true },
-  { id: 12, type: "gemaal", name: "Gemaal Legmeer", x: 410, y: 390, context: "afgelegen", rams: "kritisch", bulk: false },
-  { id: 13, type: "brug", name: "Brug Schiphol N", x: 130, y: 200, context: "afgelegen", rams: "normaal", bulk: true },
-  { id: 14, type: "stuw", name: "Stuw Uithoorn", x: 350, y: 360, context: "woongebied", rams: "normaal", bulk: true },
-  { id: 15, type: "afsluitmiddel", name: "Klep Duivendrechtse Polder", x: 260, y: 260, context: "boerenland", rams: "laag", bulk: true },
+const TYPE_COLORS = {
+  stuw: "#00c8ff", gemaal: "#ff4d6d", duiker: "#ffb347",
+  sifon: "#fb923c", hevel: "#34d399",
+  brug: "#00ff9d", sluis: "#c084fc", afsluitmiddel: "#5a7a9a",
+  vispassage: "#f472b6", vastedam: "#fbbf24",
+};
+
+
+// ─── Analyse demo-data ───────────────────────────────────────────────────────
+// Analyse data
+const CONTEXT_VERDELING = [
+  { label: "Boerenland", count: 2891, pct: 48, color: "#ffb347" },
+  { label: "Woongebied", count: 1234, pct: 21, color: "#00c8ff" },
+  { label: "Afgelegen", count: 987, pct: 16, color: "#5a7a9a" },
+  { label: "Broedgebied", count: 612, pct: 10, color: "#00ff9d" },
+  { label: "Voetgangers", count: 276, pct: 5, color: "#ff4d6d" },
 ];
 
-// DAMO attributen per objecttype — alleen functionele as (uit DAMO objectenhandboek)
-// counts zijn —  tenzij known demo data
-// Bron: DAMO 2.6 Objectenhandboek — Het Waterschapshuis (2025)
-// Stuw-attributen conform DAMO 2.6 Stuw-pagina + domeinpagina's A-M en N-Z
+const RAMS_VERDELING = [
+  { label: "Kritisch", count: 892, pct: 15, color: "#ff4d6d" },
+  { label: "Normaal", count: 3241, pct: 54, color: "#00c8ff" },
+  { label: "Laag", count: 1867, pct: 31, color: "#5a7a9a" },
+];
+
+const BULK_MATRIX = [
+  { context: "Boerenland", rams: "Kritisch", count: 134 },
+  { context: "Boerenland", rams: "Normaal", count: 1876 },
+  { context: "Boerenland", rams: "Laag", count: 881 },
+  { context: "Woongebied", rams: "Kritisch", count: 412 },
+  { context: "Woongebied", rams: "Normaal", count: 689 },
+  { context: "Woongebied", rams: "Laag", count: 133 },
+  { context: "Broedgebied", rams: "Kritisch", count: 89 },
+  { context: "Broedgebied", rams: "Normaal", count: 345 },
+  { context: "Broedgebied", rams: "Laag", count: 178 },
+];
+
+const CONTEXT_TYPEN = ["Boerenland", "Woongebied", "Broedgebied"];
+const RAMS_TYPEN = ["Kritisch", "Normaal", "Laag"];
+
+
+// ─── DAMO 2.6 Attributen ─────────────────────────────────────────────────────
 const DAMO_ATTRIBUTEN = {
   stuw: [
     // ── Watersysteem-attributen ──────────────────────────────────────────
@@ -1684,6 +1698,9 @@ const DAMO_ATTRIBUTEN = {
     },
   ],
 };
+
+
+// ─── Zelf gedefinieerde as-attributen ────────────────────────────────────────
 const DEFAULT_CONTEXT_ATTRS = [
   { name: "Omgevingstype", label: "Omgevingstype", values: [
     { waarde: "Boerenland", count: null },
@@ -2144,84 +2161,512 @@ function KaartTab({ typeFilter, setTypeFilter }) {
 }
 // ─── PDOK attribuut-data per type (uit diagnose JSON) ──────────────────────
 // Gevulde velden uit sample van 10 AGV-objecten — bron: PDOK OGC API
-const PDOK_FILL_DATA = {
-  stuw: {
-    typemateriaal:      { pct: 100, waarden: ["beton", "hout"] },
-    indicatiewaterkerend:{ pct: 100, waarden: ["Ja", "Nee"] },
-    kruinbreedte:       { pct:  50, waarden: ["1.5", "2.7", "3.0", "3.54", "5.0"] },
-    typestuw:           { pct:  40, waarden: ["schuifstuw", "vaste stuw"] },
-    hoofdfunctiestuw:   { pct:  30, waarden: ["overlaten"] },
-    hoogteconstructie:  { pct:  30, waarden: ["-0.91", "-1.66", "-1.86"] },
+
+// ─── PDOK Configuratie ───────────────────────────────────────────────────────
+const BRONHOUDERS = {
+  "W0155": {
+    label: "Amstel, Gooi en Vecht (AGV)",
+    center: [52.30, 4.95], zoom: 10,
+    bbox: "4.65,52.10,5.25,52.55",
   },
-  gemaal: {
-    naam:               { pct: 100, waarden: ["Gemaal De Tol","Loenderveen","Maarsseveen-Westbroek","Poldergemaal De Onrust","Poldergemaal Portengen"] },
-    indicatiewaterkerend:{ pct: 50, waarden: ["Ja"] },
+  "W0616": {
+    label: "Hoogheemraadschap van Rijnland",
+    center: [52.15, 4.50], zoom: 10,
+    bbox: "4.20,51.95,4.80,52.35",
   },
-  brug: {
-    lengte:             { pct: 100, waarden: ["1.65", "2.05", "2.32", "2.44", "2.55", "2.58", "2.62", "2.71"] },
-  },
-  sluis: {
-    typesluis:          { pct: 100, waarden: ["keersluis", "schutsluis naar een zijde", "uitwateringssluis/spuisluis"] },
-    naam:               { pct: 100, waarden: ["Diemerdammersluis","Muidertrekvaart","NK Angstel (Abcoude)","NK Angstel (Baambrugge)"] },
-    breedte:            { pct: 100, waarden: ["4.51", "4.87", "4.98", "5.83", "6.2", "6.28", "6.8", "12.0"] },
-    hoogtedrempel:      { pct: 100, waarden: ["-0.69", "-1.96", "-2.17", "-2.55", "-2.56", "-2.60"] },
-    kerendehoogte:      { pct:  90, waarden: ["0.17", "0.22", "0.35", "0.40", "0.50", "0.64", "0.93"] },
-    doorvaartbreedte:   { pct:  80, waarden: ["2.33", "4.49", "4.51", "5.38", "6.5", "8.32"] },
-    hoogtebinnenonderkantben: { pct: 80, waarden: ["-1.76", "-2.02", "-2.28", "-2.54", "-2.73", "-3.48"] },
-    hoogtebinnenonderkantbov: { pct: 80, waarden: ["-1.89", "-2.02", "-2.22", "-2.55", "-2.73", "-3.48"] },
-  },
-  afsluitmiddel: {
-    typemateriaal:      { pct:  10, waarden: ["metselwerk"] },
-    breedteafsluitmiddel:{ pct: 10, waarden: ["0.4"] },
-  },
-  vispassage: {
-    typevispassage:     { pct:  90, waarden: ["vissluis", "vistrap", "onbekend"] },
-    breedteopening:     { pct:  20, waarden: ["0.2", "0.6"] },
-  },
-  coupure: {
-    breedteopening:     { pct:  10, waarden: ["3.75"] },
-    hoogtedrempel:      { pct:  10, waarden: ["0.8"] },
-    sluitpeil:          { pct:  10, waarden: ["1.86"] },
-  },
-  put: {
-    typeput:            { pct:  90, waarden: ["ontvangstput"] },
+  "W0636": {
+    label: "De Stichtse Rijnlanden",
+    center: [52.05, 5.10], zoom: 10,
+    bbox: "4.80,51.85,5.45,52.25",
   },
 };
 
-const PDOK_BASE_ATTR = "https://api.pdok.nl/hwh/waterschappen-kunstwerken-imwa/ogc/v1/collections";
-const AGV_WB = "Waterschap Amstel, Gooi en Vecht";
-const AGV_BBOX = "4.65,52.10,5.25,52.55";
+const PDOK_COLLECTIES = {
+  stuw:          "stuw",
+  gemaal:        "gemaal",
+  duiker:        "duiker",
+  sifon:         "sifon",
+  hevel:         "hevel",
+  brug:          "brug",
+  sluis:         "sluis",
+  afsluitmiddel: "afsluitmiddel",
+  vispassage:    "vispassage",
+  vastedam:      "vastedam",
+};
 
-function DecompositieTab() {
-  const [selected, setSelected] = useState("stuw");
-  const [clusterAttrs, setClusterAttrs] = useState({});
-  const [waardeStatus, setWaardeStatus] = useState({});
-  const [contextAttrs, setContextAttrs] = useState({ stuw: DEFAULT_CONTEXT_ATTRS.map(a => ({ ...a, values: a.values.map(v => ({ ...v })) })) });
-  const [ramsAttrs, setRamsAttrs] = useState({ stuw: DEFAULT_RAMS_ATTRS.map(a => ({ ...a, values: a.values.map(v => ({ ...v })) })) });
-  const [newAttr, setNewAttr] = useState({ ctx: { name: "", waarden: "" }, rams: { name: "", waarden: "" } });
+const PDOK_BASE = "https://api.pdok.nl/hwh/waterschappen-kunstwerken-imwa/ogc/v1/collections";
 
-  // PDOK live counts per objecttype
-  const [pdokCounts, setPdokCounts] = useState({});   // { typeId: { attrName: { waarde: count } } }
-  const [loadingPdok, setLoadingPdok] = useState(false);
-  const [pdokStatus, setPdokStatus] = useState(null);  // null | "loading" | "done" | "error"
-  const [pdokN, setPdokN] = useState(0);
+function detectType(collectie) {
+  const map = {
+    stuw: "stuw", gemaal: "gemaal", duiker: "duiker", sifon: "duiker", hevel: "duiker",
+    brug: "brug", sluis: "sluis", afsluitmiddel: "afsluitmiddel",
+    vispassage: "vispassage", vastedam: "vastedam",
+  };
+  return map[collectie] || collectie;
+}
 
-  const obj = OBJECTTYPEN.find(o => o.id === selected);
-  const damoAttrs = DAMO_ATTRIBUTEN[selected] || [];
-  const ctxAttrs = contextAttrs[selected] || DEFAULT_CONTEXT_ATTRS.map(a => ({ ...a, values: a.values.map(v => ({ ...v })) }));
-  const rmAttrs = ramsAttrs[selected] || DEFAULT_RAMS_ATTRS.map(a => ({ ...a, values: a.values.map(v => ({ ...v })) }));
 
-  // Haal live attribuutwaarden op van PDOK voor huidig objecttype
-  async function reloadPdok() {
-    const collectie = obj?.pdokCollectie || selected;
-    setLoadingPdok(true);
-    setPdokStatus("loading");
-    setPdokN(0);
+const PDOK_BASE = "https://api.pdok.nl/hwh/waterschappen-kunstwerken-imwa/ogc/v1/collections";
+const AGV_WB   = "Waterschap Amstel, Gooi en Vecht";
+
+function detectType(collectie) {
+  const map = {
+    stuw: "stuw", gemaal: "gemaal",
+    duiker: "duiker", sifon: "duiker", hevel: "duiker",
+    brug: "brug", sluis: "sluis",
+    afsluitmiddel: "afsluitmiddel", vispassage: "vispassage",
+    vastedam: "vastedam",
+  };
+  return map[collectie] || collectie;
+}
+
+// Analyse data
+const CONTEXT_VERDELING = [
+  { label: "Boerenland", count: 2891, pct: 48, color: "#ffb347" },
+  { label: "Woongebied", count: 1234, pct: 21, color: "#00c8ff" },
+  { label: "Afgelegen", count: 987, pct: 16, color: "#5a7a9a" },
+  { label: "Broedgebied", count: 612, pct: 10, color: "#00ff9d" },
+  { label: "Voetgangers", count: 276, pct: 5, color: "#ff4d6d" },
+];
+
+const RAMS_VERDELING = [
+  { label: "Kritisch", count: 892, pct: 15, color: "#ff4d6d" },
+  { label: "Normaal", count: 3241, pct: 54, color: "#00c8ff" },
+  { label: "Laag", count: 1867, pct: 31, color: "#5a7a9a" },
+];
+
+const BULK_MATRIX = [
+  { context: "Boerenland", rams: "Kritisch", count: 134 },
+  { context: "Boerenland", rams: "Normaal", count: 1876 },
+  { context: "Boerenland", rams: "Laag", count: 881 },
+  { context: "Woongebied", rams: "Kritisch", count: 412 },
+  { context: "Woongebied", rams: "Normaal", count: 689 },
+  { context: "Woongebied", rams: "Laag", count: 133 },
+  { context: "Broedgebied", rams: "Kritisch", count: 89 },
+  { context: "Broedgebied", rams: "Normaal", count: 345 },
+  { context: "Broedgebied", rams: "Laag", count: 178 },
+];
+
+const CONTEXT_TYPEN = ["Boerenland", "Woongebied", "Broedgebied"];
+const RAMS_TYPEN = ["Kritisch", "Normaal", "Laag"];
+
+
+// ─── KaartTab met Leaflet ─────────────────────────────────────────────────────
+function LeafletKaart({ bronhouder, setBronhouder, pdokTotalen, setPdokTotalen }) {
+  const mapRef      = useRef(null);
+  const leafletMap  = useRef(null);
+  const markersLayer= useRef(null);
+  const abortRef    = useRef(null);
+
+  const [status, setStatus]           = useState("idle");
+  const [stats, setStats]             = useState({});
+  const [selected, setSelected]       = useState(null);
+  const [totaal, setTotaal]           = useState(0);
+  const [actieveCol, setActieveCol]   = useState(null);
+
+  const bron = BRONHOUDERS[bronhouder];
+
+  useEffect(() => {
+    if (leafletMap.current) return;
+    const map = L.map(mapRef.current, { center: bron.center, zoom: bron.zoom });
+    leafletMap.current = map;
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+      subdomains: "abcd", maxZoom: 19,
+    }).addTo(map);
+    markersLayer.current = L.layerGroup().addTo(map);
+    return () => { map.remove(); leafletMap.current = null; };
+  }, []);
+
+  async function fetchCollectie(collectieNaam) {
+    if (abortRef.current) abortRef.current.abort();
+    abortRef.current = new AbortController();
+    const signal = abortRef.current.signal;
+
+    setStatus("loading"); setSelected(null);
+    setActieveCol(collectieNaam);
+    markersLayer.current.clearLayers();
+    setStats({}); setTotaal(0);
+
+    const type  = detectType(collectieNaam);
+    const kleur = TYPE_COLORS[type] || "#888";
 
     try {
-      // Haal max 200 objecten op voor statistische zekerheid
-      let allFeatures = [];
-      let url = `${PDOK_BASE_ATTR}/${collectie}/items?f=json&limit=200&bbox=${AGV_BBOX}`;
+      let allFeats = [];
+      let url = `${PDOK_BASE}/${collectieNaam}/items?f=json&limit=1000&bbox=${bron.bbox}`;
+      let pages = 0;
+      while (url && pages < 5) {
+        const resp = await fetch(url, { signal });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        // Filter op waterbeheerder
+        const feats = (data.features || []).filter(f =>
+          !f.properties?.waterbeheerder || f.properties.waterbeheerder === AGV_WB
+        );
+        allFeats = allFeats.concat(feats);
+        const next = (data.links || []).find(l => l.rel === "next");
+        url = next ? next.href : null;
+        pages++;
+      }
+
+      const n = allFeats.length;
+      leafletMap.current.setView(bron.center, bron.zoom);
+
+      allFeats.forEach(f => {
+        if (!f.geometry) return;
+        const c = f.geometry.coordinates;
+        if (!c || c.length < 2) return;
+        const lat = c[1], lon = c[0];
+        if (lat < 50 || lat > 54 || lon < 3 || lon > 8) return;
+        const p = f.properties || {};
+        const naam = p.naam || p.code || f.id || "Onbekend";
+        const marker = L.circleMarker([lat, lon], {
+          radius: 6, fillColor: kleur, color: "#0b1220",
+          weight: 1.5, fillOpacity: 0.85,
+        });
+        marker.on("click", () => setSelected({ naam, type, props: p, coords: [lon, lat] }));
+        marker.bindTooltip(
+          `<div style="font-family:monospace;font-size:11px;background:#111c2e;color:#d0e4f7;border:1px solid #1e3a5f;padding:6px 10px">
+            <b style="color:${kleur}">${naam}</b><br/>Type: ${type}
+          </div>`, { sticky: true }
+        );
+        markersLayer.current.addLayer(marker);
+      });
+
+      setStats({ [type]: n });
+      setTotaal(n);
+      setStatus("success");
+
+      // Sla totaal op zodat attribuuttab het kan tonen
+      setPdokTotalen(prev => ({ ...prev, [type]: n }));
+
+      if (n > 0) {
+        try { leafletMap.current.fitBounds(markersLayer.current.getBounds(), { padding: [40,40] }); } catch(e) {}
+      }
+    } catch(err) {
+      if (err.name === "AbortError") return;
+      console.error("PDOK fout:", err);
+      setStatus("error");
+    }
+  }
+
+  return (
+    <div>
+      {/* Stat rij */}
+      <div className="stat-row">
+        <div className="stat-card">
+          <div className="stat-num">{totaal.toLocaleString("nl")}</div>
+          <div className="stat-label">Objecten geladen (AGV)</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-num">{Object.keys(stats).length}</div>
+          <div className="stat-label">Objecttype geladen</div>
+        </div>
+        <div className="stat-card" style={{ gridColumn: "span 2" }}>
+          <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--accent)", letterSpacing: 2, marginBottom: 4 }}>// DATABRON</div>
+          <div style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--text)" }}>PDOK · Waterschappen Kunstwerken IMWA</div>
+          <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", marginTop: 2 }}>
+            Filter: bbox beheergebied {bronhouder} · waterbeheerder = {AGV_WB}
+          </div>
+          <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)" }}>
+            api.pdok.nl/hwh/waterschappen-kunstwerken-imwa/ogc/v1
+          </div>
+        </div>
+      </div>
+
+      <div className="map-layout">
+        <div className="sidebar">
+          <div className="sidebar-title">// Databron</div>
+          <div className="filter-group">
+            <div className="filter-label">BRONHOUDER</div>
+            <select className="filter-select" value={bronhouder}
+              onChange={e => { setBronhouder(e.target.value); markersLayer.current?.clearLayers(); setTotaal(0); setStats({}); setStatus("idle"); }}>
+              {Object.entries(BRONHOUDERS).map(([code, info]) => (
+                <option key={code} value={code}>{code} – {info.label.split(" (")[0]}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group" style={{ marginTop: 12 }}>
+            <div className="filter-label">OBJECTTYPE LADEN VAN PDOK</div>
+            {OBJECTTYPEN.map(o => (
+              <button key={o.id} onClick={() => fetchCollectie(o.pdokCollectie)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  width: "100%", background: actieveCol === o.pdokCollectie ? "rgba(0,200,255,0.1)" : "none",
+                  border: actieveCol === o.pdokCollectie ? "1px solid var(--accent)" : "1px solid var(--border)",
+                  color: actieveCol === o.pdokCollectie ? "var(--accent)" : "var(--muted)",
+                  padding: "6px 10px", cursor: "pointer", marginBottom: 4,
+                  fontFamily: "DM Mono", fontSize: 10, letterSpacing: 1, textAlign: "left",
+                }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: TYPE_COLORS[o.id] || "#888", flexShrink: 0 }} />
+                {o.label.toUpperCase()}
+                {actieveCol === o.pdokCollectie && totaal > 0 && (
+                  <span style={{ marginLeft: "auto", color: "var(--accent2)" }}>{totaal}</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {Object.entries(stats).length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <div className="sidebar-title">// Geladen</div>
+              {Object.entries(stats).map(([type, count]) => (
+                <div key={type} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: TYPE_COLORS[type] || "#888", flexShrink: 0 }} />
+                  <span style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--muted)" }}>{type}</span>
+                  <span style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--accent2)", marginLeft: "auto" }}>{count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ marginTop: "auto", paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+            {status === "idle" && <div style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--muted)" }}>← Kies objecttype</div>}
+            {status === "loading" && <div className="loading"><div className="spinner" />Ophalen...</div>}
+            {status === "success" && <div style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--accent2)" }}>✓ {totaal} AGV-objecten</div>}
+            {status === "error" && <div style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--danger)" }}>✗ Fout — zie console</div>}
+            <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", marginTop: 6 }}>
+              Kaart: CartoDB Dark Matter<br/>Data: PDOK OGC API Features v1
+            </div>
+          </div>
+        </div>
+
+        <div style={{ position: "relative" }}>
+          <div ref={mapRef} style={{ height: 520, border: "1px solid var(--border)" }} />
+          <div style={{
+            position: "absolute", bottom: 8, left: 8, zIndex: 1000,
+            background: "rgba(11,18,32,0.85)", border: "1px solid var(--border)",
+            padding: "4px 10px", fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)",
+          }}>
+            Bron: PDOK · Gegevensknooppunt Waterschappen · {bronhouder} · IMWA Kunstwerken
+          </div>
+        </div>
+      </div>
+
+      {selected && (
+        <div className="detail-panel">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontFamily: "DM Mono", fontSize: 11, color: "var(--accent)", letterSpacing: 2 }}>// OBJECT DETAIL · PDOK LIVE</div>
+            <button onClick={() => setSelected(null)} style={{ background: "none", border: "1px solid var(--border)", color: "var(--muted)", padding: "2px 8px", cursor: "pointer", fontFamily: "DM Mono", fontSize: 10 }}>SLUIT</button>
+          </div>
+          <div className="detail-grid" style={{ marginTop: 12 }}>
+            <div className="detail-item"><div className="detail-key">Naam/ID</div><div className="detail-val">{selected.naam}</div></div>
+            <div className="detail-item"><div className="detail-key">Type (IMWA)</div><div className="detail-val" style={{ color: TYPE_COLORS[selected.type] || "#888" }}>{selected.type}</div></div>
+            <div className="detail-item"><div className="detail-key">Bronhouder</div><div className="detail-val">{bronhouder}</div></div>
+            <div className="detail-item"><div className="detail-key">Coördinaten</div><div className="detail-val" style={{ fontFamily: "DM Mono", fontSize: 11 }}>{selected.coords[1].toFixed(5)}, {selected.coords[0].toFixed(5)}</div></div>
+            <div className="detail-item"><div className="detail-key">Code</div><div className="detail-val" style={{ fontFamily: "DM Mono", fontSize: 10 }}>{selected.props.code || "—"}</div></div>
+            <div className="detail-item"><div className="detail-key">Databron</div><div className="detail-val"><span className="tag func">PDOK · IMWA 2.6</span></div></div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function KaartTab({ pdokTotalen, setPdokTotalen }) {
+  const [bronhouder, setBronhouder] = useState("W0155");
+  return <LeafletKaart bronhouder={bronhouder} setBronhouder={setBronhouder} pdokTotalen={pdokTotalen} setPdokTotalen={setPdokTotalen} />;
+}
+
+
+// ─── Attribuut Tab ────────────────────────────────────────────────────────────
+function AttrBlok({ attr, isClusterFn, toggleClusterFn, getWaardeFn, setWaardeFn, pdokTypeData }) {
+  const actief = isClusterFn(attr.name);
+
+  function getCount(waarde) {
+    if (!pdokTypeData) return v => v.count;
+    // Zoek in live PDOK data
+    const attrKey = Object.keys(pdokTypeData.counts).find(
+      k => k.toLowerCase() === attr.name.toLowerCase()
+    );
+    if (!attrKey) return null;
+    const tally = pdokTypeData.counts[attrKey];
+    const match = Object.entries(tally).find(([k]) => k.toLowerCase() === String(waarde).toLowerCase());
+    return match ? match[1] : 0;
+  }
+
+  function getTotal() {
+    if (!pdokTypeData) return null;
+    const attrKey = Object.keys(pdokTypeData.counts).find(
+      k => k.toLowerCase() === attr.name.toLowerCase()
+    );
+    if (!attrKey) return null;
+    return Object.values(pdokTypeData.counts[attrKey]).reduce((s, v) => s + v, 0);
+  }
+
+  return (
+    <div style={{
+      border: `1px solid ${actief ? "var(--accent)" : "var(--border)"}`,
+      background: actief ? "rgba(0,200,255,0.04)" : "var(--panel2)",
+      marginBottom: 6, transition: "all 0.2s"
+    }}>
+      {/* Attribuutregel */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", cursor: "pointer" }}
+        onClick={() => toggleClusterFn(attr.name)}>
+        <div style={{
+          width: 16, height: 16,
+          border: `1px solid ${actief ? "var(--accent)" : "var(--border)"}`,
+          background: actief ? "var(--accent)" : "transparent",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          flexShrink: 0, transition: "all 0.15s"
+        }}>
+          {actief && <span style={{ color: "var(--bg)", fontSize: 10, fontWeight: 700 }}>✓</span>}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ fontSize: 12, fontWeight: actief ? 600 : 400, color: actief ? "var(--text)" : "var(--muted)" }}>
+            {attr.label}
+          </span>
+          {attr.eenheid && <span style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", marginLeft: 6 }}>[{attr.eenheid}]</span>}
+          <div style={{ display: "flex", gap: 4, marginTop: 2, flexWrap: "wrap" }}>
+            <span style={{ fontFamily: "DM Mono", fontSize: 8, color: "var(--muted)", border: "1px solid var(--border)", padding: "1px 4px" }}>DAMO 2.6</span>
+            {attr.model && <span style={{ fontFamily: "DM Mono", fontSize: 8, color: "var(--accent)", border: "1px solid rgba(0,200,255,0.3)", padding: "1px 4px" }}>{attr.model}</span>}
+            {attr.type && <span style={{ fontFamily: "DM Mono", fontSize: 8, color: "var(--muted)", padding: "1px 4px" }}>{attr.type}</span>}
+          </div>
+        </div>
+        {actief
+          ? <span style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--accent)", letterSpacing: 1, flexShrink: 0 }}>CLUSTERATTRIBUUT</span>
+          : <span style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", flexShrink: 0 }}>niet meegenomen</span>
+        }
+      </div>
+
+      {/* Waarden — alleen als clusterattribuut */}
+      {actief && (
+        <div style={{ borderTop: "1px solid var(--border)", padding: "0 0 8px 0" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 90px 80px 100px", gap: 0, padding: "8px 14px 6px 42px", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", letterSpacing: 1 }}>WAARDE</div>
+            <div style={{ fontFamily: "DM Mono", fontSize: 9, color: pdokTypeData ? "var(--accent2)" : "var(--muted)", letterSpacing: 1, textAlign: "right" }}>
+              {pdokTypeData ? "LIVE AANTAL" : "AANTAL"}
+            </div>
+            <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", letterSpacing: 1, textAlign: "center" }}>BULK</div>
+            <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", letterSpacing: 1, textAlign: "center" }}>MAATWERK</div>
+          </div>
+          {attr.values.map(v => {
+            const waardStatus = getWaardeFn(attr.name, v.waarde);
+            const isBulk     = waardStatus === "bulk";
+            const isMaatwerk = waardStatus === "maatwerk";
+            const liveCount  = pdokTypeData ? getCount(v.waarde) : null;
+            const total      = pdokTypeData ? getTotal() : null;
+            const displayN   = liveCount !== null ? liveCount : v.count;
+            const pct        = liveCount !== null && total > 0 ? Math.round(liveCount / total * 100) : null;
+
+            return (
+              <div key={v.waarde} style={{
+                display: "grid", gridTemplateColumns: "1fr 90px 80px 100px",
+                alignItems: "center", padding: "9px 14px 9px 42px",
+                borderBottom: "1px solid rgba(30,58,95,0.4)",
+                background: isBulk ? "rgba(0,255,157,0.06)" : isMaatwerk ? "rgba(255,77,109,0.06)" : "transparent",
+              }}>
+                <div style={{ fontSize: 12, color: isBulk ? "var(--bulk)" : isMaatwerk ? "var(--nobulk)" : "var(--text)", fontWeight: (isBulk || isMaatwerk) ? 600 : 400 }}>
+                  {v.waarde}
+                </div>
+                <div style={{ fontFamily: "DM Mono", fontSize: 11, textAlign: "right" }}>
+                  {displayN !== null && displayN !== undefined ? (
+                    <span style={{ color: liveCount !== null ? "var(--accent2)" : "var(--muted)" }}>
+                      {displayN}{pct !== null ? <span style={{ fontSize: 9, color: "var(--muted)", marginLeft: 3 }}>{pct}%</span> : ""}
+                    </span>
+                  ) : <span style={{ color: "var(--muted)" }}>—</span>}
+                </div>
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                  <button onClick={e => { e.stopPropagation(); setWaardeFn(attr.name, v.waarde, "bulk"); }}
+                    style={{ width: 64, padding: "5px 0", fontSize: 9, fontFamily: "DM Mono", cursor: "pointer",
+                      border: "1px solid var(--bulk)", background: isBulk ? "var(--bulk)" : "transparent",
+                      color: isBulk ? "var(--bg)" : "var(--bulk)", transition: "all 0.15s" }}>
+                    {isBulk ? "✓ BULK" : "BULK"}
+                  </button>
+                </div>
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                  <button onClick={e => { e.stopPropagation(); setWaardeFn(attr.name, v.waarde, "maatwerk"); }}
+                    style={{ width: 80, padding: "5px 0", fontSize: 9, fontFamily: "DM Mono", cursor: "pointer",
+                      border: "1px solid var(--nobulk)", background: isMaatwerk ? "var(--nobulk)" : "transparent",
+                      color: isMaatwerk ? "var(--bg)" : "var(--nobulk)", transition: "all 0.15s" }}>
+                    {isMaatwerk ? "✓ MAATWERK" : "MAATWERK"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NieuwAttrForm({ asKey, label, onAdd }) {
+  const [naam, setNaam] = useState("");
+  const [waarden, setWaarden] = useState("");
+  function handle() {
+    if (!naam.trim()) return;
+    const vals = waarden.split(",").map(w => w.trim()).filter(Boolean);
+    if (!vals.length) return;
+    onAdd({ name: naam.trim(), label: naam.trim(), values: vals.map(w => ({ waarde: w, count: null })) });
+    setNaam(""); setWaarden("");
+  }
+  return (
+    <div style={{ marginTop: 12, padding: 12, border: "1px dashed var(--border)", background: "rgba(0,200,255,0.02)" }}>
+      <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--accent)", letterSpacing: 2, marginBottom: 8 }}>+ ATTRIBUUT TOEVOEGEN</div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <input placeholder="Attribuutnaam" value={naam} onChange={e => setNaam(e.target.value)}
+          style={{ background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text)", padding: "6px 10px", fontFamily: "DM Mono", fontSize: 11, flex: "1 1 140px" }} />
+        <input placeholder="Waarden (komma-gescheiden)" value={waarden} onChange={e => setWaarden(e.target.value)}
+          style={{ background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text)", padding: "6px 10px", fontFamily: "DM Mono", fontSize: 11, flex: "2 1 200px" }} />
+        <button onClick={handle}
+          style={{ padding: "6px 16px", background: "none", border: "1px solid var(--accent)", color: "var(--accent)", fontFamily: "DM Mono", fontSize: 10, cursor: "pointer", letterSpacing: 1 }}>
+          VOEG TOE
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DecompositieTab({ pdokTotalen, setPdokTotalen }) {
+  const [selected, setSelected]       = useState("stuw");
+  const [clusterAttrs, setClusterAttrs] = useState({});
+  const [waardeStatus, setWaardeStatus] = useState({});
+  const [ctxAttrsMap, setCtxAttrsMap] = useState({});
+  const [ramsAttrsMap, setRamsAttrsMap] = useState({});
+  const [newAttr, setNewAttr]         = useState({ ctx: "", rams: "" });
+  const [pdokCounts, setPdokCounts]   = useState({});   // { typeId: { n, counts } }
+  const [pdokStatus, setPdokStatus]   = useState({});   // { typeId: "idle"|"loading"|"done"|"error" }
+
+  const obj       = OBJECTTYPEN.find(o => o.id === selected);
+  const damoAttrs = DAMO_ATTRIBUTEN[selected] || [];
+  const ctxAttrs  = ctxAttrsMap[selected]  || DEFAULT_CONTEXT_ATTRS;
+  const ramsAttrs = ramsAttrsMap[selected] || DEFAULT_RAMS_ATTRS;
+  const pdokData  = pdokCounts[selected] || null;
+  const loadStat  = pdokStatus[selected]  || "idle";
+
+  // Live totaal: uit pdokTotalen (van kaart) of pdokCounts (van reload)
+  const liveN = pdokData?.n || pdokTotalen[selected] || null;
+
+  function isCluster(name) { return !!(clusterAttrs[selected]?.has(name)); }
+  function toggleCluster(name) {
+    setClusterAttrs(s => {
+      const set = new Set(s[selected] || []);
+      set.has(name) ? set.delete(name) : set.add(name);
+      return { ...s, [selected]: set };
+    });
+  }
+  function getWaarde(attrName, waarde) {
+    return waardeStatus[`${selected}__${attrName}__${waarde}`] || null;
+  }
+  function setWaarde(attrName, waarde, status) {
+    const key = `${selected}__${attrName}__${waarde}`;
+    setWaardeStatus(s => ({ ...s, [key]: s[key] === status ? null : status }));
+  }
+
+  const clusterCount    = (clusterAttrs[selected]?.size || 0);
+  const bulkWaardeCount = Object.entries(waardeStatus)
+    .filter(([k, v]) => k.startsWith(selected + "__") && v === "bulk").length;
+
+  // PDOK reload voor attribuutaantallen
+  async function reloadPdok() {
+    const o = OBJECTTYPEN.find(x => x.id === selected);
+    const collectie = o?.pdokCollectie || selected;
+    setPdokStatus(s => ({ ...s, [selected]: "loading" }));
+    try {
+      let allFeats = [];
+      let url = `${PDOK_BASE}/${collectie}/items?f=json&limit=200&bbox=4.65,52.10,5.25,52.55`;
       let pages = 0;
       while (url && pages < 3) {
         const resp = await fetch(url);
@@ -2230,312 +2675,57 @@ function DecompositieTab() {
         const feats = (data.features || []).filter(f =>
           !f.properties?.waterbeheerder || f.properties.waterbeheerder === AGV_WB
         );
-        allFeatures = allFeatures.concat(feats);
+        allFeats = allFeats.concat(feats);
         const next = (data.links || []).find(l => l.rel === "next");
         url = next ? next.href : null;
         pages++;
       }
-
-      const n = allFeatures.length;
-      setPdokN(n);
-
-      if (n === 0) { setPdokStatus("error"); setLoadingPdok(false); return; }
-
-      // Tel waarden per attribuut
+      const n = allFeats.length;
       const counts = {};
-      const allKeys = new Set(allFeatures.flatMap(f => Object.keys(f.properties || {})));
+      const allKeys = new Set(allFeats.flatMap(f => Object.keys(f.properties || {})));
       allKeys.forEach(k => {
         const tally = {};
-        allFeatures.forEach(f => {
-          const v = f.properties[k];
-          if (v !== null && v !== undefined) {
-            const vs = String(v);
+        allFeats.forEach(f => {
+          const val = f.properties[k];
+          if (val !== null && val !== undefined) {
+            const vs = String(val);
             tally[vs] = (tally[vs] || 0) + 1;
           }
         });
         if (Object.keys(tally).length > 0) counts[k] = tally;
       });
-
-      setPdokCounts(prev => ({ ...prev, [selected]: { n, counts } }));
-      setPdokStatus("done");
+      setPdokCounts(s => ({ ...s, [selected]: { n, counts } }));
+      setPdokStatus(s => ({ ...s, [selected]: "done" }));
+      // Update ook pdokTotalen voor de boomstructuur
+      setPdokTotalen(prev => ({ ...prev, [selected]: n }));
     } catch(err) {
-      console.error("PDOK reload fout:", err);
-      setPdokStatus("error");
+      console.error(err);
+      setPdokStatus(s => ({ ...s, [selected]: "error" }));
     }
-    setLoadingPdok(false);
   }
 
-  // Haal count op voor een attribuut+waarde uit PDOK live data
-  function getLiveCount(attrName, waarde) {
-    const typeData = pdokCounts[selected];
-    if (!typeData) {
-      // Fallback: diagnose JSON data
-      const fallback = PDOK_FILL_DATA[selected]?.[attrName.toLowerCase()];
-      return fallback ? null : null; // null = nog niet geladen
-    }
-    const attrKey = Object.keys(typeData.counts).find(
-      k => k.toLowerCase() === attrName.toLowerCase()
-    );
-    if (!attrKey) return 0;
-    const waardeLower = String(waarde).toLowerCase();
-    const tally = typeData.counts[attrKey];
-    // Zoek case-insensitief
-    const match = Object.entries(tally).find(([k]) => k.toLowerCase() === waardeLower);
-    return match ? match[1] : 0;
+  function addCtxAttr(attr) {
+    setCtxAttrsMap(s => ({ ...s, [selected]: [...(s[selected] || DEFAULT_CONTEXT_ATTRS), attr] }));
+  }
+  function addRamsAttr(attr) {
+    setRamsAttrsMap(s => ({ ...s, [selected]: [...(s[selected] || DEFAULT_RAMS_ATTRS), attr] }));
   }
 
-  function getLiveTotal(attrName) {
-    const typeData = pdokCounts[selected];
-    if (!typeData) return null;
-    const attrKey = Object.keys(typeData.counts).find(
-      k => k.toLowerCase() === attrName.toLowerCase()
-    );
-    if (!attrKey) return 0;
-    return Object.values(typeData.counts[attrKey]).reduce((s, v) => s + v, 0);
-  }
-
-  function isCluster(attrName) {
-    return !!(clusterAttrs[selected] && clusterAttrs[selected].has(attrName));
-  }
-  function toggleCluster(attrName) {
-    setClusterAttrs(s => {
-      const set = new Set(s[selected] || []);
-      set.has(attrName) ? set.delete(attrName) : set.add(attrName);
-      return { ...s, [selected]: set };
-    });
-  }
-  function getWaardeStatus(attrName, waarde) {
-    return waardeStatus[`${selected}__${attrName}__${waarde}`] || null;
-  }
-  function setWaarde(attrName, waarde, status) {
-    const key = `${selected}__${attrName}__${waarde}`;
-    setWaardeStatus(s => ({ ...s, [key]: s[key] === status ? null : status }));
-  }
-
-  function addCustomAttr(as) {
-    const val = newAttr[as];
-    if (!val.name.trim()) return;
-    const waarden = val.waarden.split(",").map(w => w.trim()).filter(Boolean);
-    if (!waarden.length) return;
-    const attr = { name: val.name.trim(), label: val.name.trim(), values: waarden.map(w => ({ waarde: w, count: null })) };
-    if (as === "ctx") {
-      setContextAttrs(s => ({ ...s, [selected]: [...(s[selected] || DEFAULT_CONTEXT_ATTRS), attr] }));
-    } else {
-      setRamsAttrs(s => ({ ...s, [selected]: [...(s[selected] || DEFAULT_RAMS_ATTRS), attr] }));
-    }
-    setNewAttr(s => ({ ...s, [as]: { name: "", waarden: "" } }));
-  }
-
-  // Tel clusterattributen en bulk-waarden voor samenvatting
-  const clusterSet = clusterAttrs[selected] || new Set();
-  const clusterCount = clusterSet.size;
-  const bulkWaardeCount = Object.entries(waardeStatus).filter(([k, v]) => k.startsWith(selected + "__") && v === "bulk").length;
-
-  function AttrBlok({ attr, bronLabel }) {
-    const actief = isCluster(attr.name);
-    return (
-      <div style={{
-        border: `1px solid ${actief ? "var(--accent)" : "var(--border)"}`,
-        background: actief ? "rgba(0,200,255,0.04)" : "var(--panel2)",
-        marginBottom: 6, transition: "all 0.2s"
-      }}>
-        {/* Attribuutregel — altijd zichtbaar */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", cursor: "pointer" }}
-          onClick={() => toggleCluster(attr.name)}>
-          <div style={{
-            width: 16, height: 16, border: `1px solid ${actief ? "var(--accent)" : "var(--border)"}`,
-            background: actief ? "var(--accent)" : "transparent",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            flexShrink: 0, transition: "all 0.15s"
-          }}>
-            {actief && <span style={{ color: "var(--bg)", fontSize: 10, fontWeight: 700 }}>✓</span>}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: 12, fontWeight: actief ? 600 : 400, color: actief ? "var(--text)" : "var(--muted)" }}>
-              {attr.label}
-            </span>
-            {attr.eenheid && (
-              <span style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", marginLeft: 6 }}>
-                [{attr.eenheid}]
-              </span>
-            )}
-            <div style={{ display: "flex", gap: 4, marginTop: 2, flexWrap: "wrap" }}>
-              {bronLabel && (
-                <span style={{ fontFamily: "DM Mono", fontSize: 8, color: "var(--muted)", border: "1px solid var(--border)", padding: "1px 4px" }}>
-                  {bronLabel}
-                </span>
-              )}
-              {attr.model && (
-                <span style={{ fontFamily: "DM Mono", fontSize: 8, color: "var(--accent)", border: "1px solid rgba(0,200,255,0.3)", padding: "1px 4px" }}>
-                  {attr.model}
-                </span>
-              )}
-              {attr.type && (
-                <span style={{ fontFamily: "DM Mono", fontSize: 8, color: "var(--muted)", padding: "1px 4px" }}>
-                  {attr.type}
-                </span>
-              )}
-            </div>
-          </div>
-          {actief
-            ? <span style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--accent)", letterSpacing: 1, flexShrink: 0 }}>CLUSTERATTRIBUUT</span>
-            : <span style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", flexShrink: 0 }}>niet meegenomen</span>
-          }
-        </div>
-
-        {/* Waarden — alleen zichtbaar als clusterattribuut aangeklikt */}
-        {actief && (
-          <div style={{ borderTop: "1px solid var(--border)", padding: "0 0 8px 0" }}>
-            {/* Kolomkoppen */}
-            <div style={{
-              display: "grid", gridTemplateColumns: "1fr 80px 80px 100px",
-              gap: 0, padding: "8px 14px 6px 42px",
-              borderBottom: "1px solid var(--border)"
-            }}>
-              <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", letterSpacing: 1 }}>WAARDE</div>
-              <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", letterSpacing: 1, textAlign: "right" }}>
-                AANTAL {pdokCounts[selected] ? <span style={{ color: "var(--accent2)" }}>LIVE</span> : ""}
-              </div>
-              <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", letterSpacing: 1, textAlign: "center" }}>BULK</div>
-              <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", letterSpacing: 1, textAlign: "center" }}>MAATWERK</div>
-            </div>
-            {/* Één regel per waarde */}
-            {attr.values.map(v => {
-              const status = getWaardeStatus(attr.name, v.waarde);
-              const isBulk = status === "bulk";
-              const isMaatwerk = status === "maatwerk";
-              // Live count van PDOK, anders statische waarde
-              const liveCount = getLiveCount(attr.name, v.waarde);
-              const liveTotal = getLiveTotal(attr.name);
-              const displayCount = liveCount !== null ? liveCount : v.count;
-              const pct = liveCount !== null && liveTotal > 0
-                ? Math.round((liveCount / liveTotal) * 100)
-                : null;
-              return (
-                <div key={v.waarde} style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 80px 80px 100px",
-                  gap: 0,
-                  alignItems: "center",
-                  padding: "9px 14px 9px 42px",
-                  borderBottom: "1px solid rgba(30,58,95,0.5)",
-                  background: isBulk
-                    ? "rgba(0,255,157,0.06)"
-                    : isMaatwerk
-                    ? "rgba(255,77,109,0.06)"
-                    : "transparent",
-                  transition: "background 0.15s",
-                }}>
-                  {/* Waarde naam */}
-                  <div style={{
-                    fontSize: 12,
-                    color: isBulk ? "var(--bulk)" : isMaatwerk ? "var(--nobulk)" : "var(--text)",
-                    fontWeight: (isBulk || isMaatwerk) ? 600 : 400,
-                  }}>{v.waarde}</div>
-
-                  {/* Aantal + percentage */}
-                  <div style={{ fontFamily: "DM Mono", fontSize: 11, textAlign: "right" }}>
-                    {displayCount !== null && displayCount !== undefined ? (
-                      <span style={{ color: liveCount !== null ? "var(--accent2)" : "var(--muted)" }}>
-                        {displayCount}
-                        {pct !== null && (
-                          <span style={{ fontSize: 9, color: "var(--muted)", marginLeft: 3 }}>
-                            {pct}%
-                          </span>
-                        )}
-                      </span>
-                    ) : (
-                      <span style={{ color: "var(--muted)" }}>—</span>
-                    )}
-                  </div>
-
-                  {/* Bulk knop */}
-                  <div style={{ display: "flex", justifyContent: "center" }}>
-                    <button
-                      onClick={e => { e.stopPropagation(); setWaarde(attr.name, v.waarde, "bulk"); }}
-                      style={{
-                        width: 64, padding: "5px 0",
-                        fontSize: 9, fontFamily: "DM Mono", letterSpacing: 1,
-                        cursor: "pointer",
-                        border: `1px solid var(--bulk)`,
-                        background: isBulk ? "var(--bulk)" : "transparent",
-                        color: isBulk ? "var(--bg)" : "var(--bulk)",
-                        fontWeight: isBulk ? 700 : 400,
-                        transition: "all 0.15s"
-                      }}>
-                      {isBulk ? "✓ BULK" : "BULK"}
-                    </button>
-                  </div>
-
-                  {/* Maatwerk knop */}
-                  <div style={{ display: "flex", justifyContent: "center" }}>
-                    <button
-                      onClick={e => { e.stopPropagation(); setWaarde(attr.name, v.waarde, "maatwerk"); }}
-                      style={{
-                        width: 80, padding: "5px 0",
-                        fontSize: 9, fontFamily: "DM Mono", letterSpacing: 1,
-                        cursor: "pointer",
-                        border: `1px solid var(--nobulk)`,
-                        background: isMaatwerk ? "var(--nobulk)" : "transparent",
-                        color: isMaatwerk ? "var(--bg)" : "var(--nobulk)",
-                        fontWeight: isMaatwerk ? 700 : 400,
-                        transition: "all 0.15s"
-                      }}>
-                      {isMaatwerk ? "✓ MAATWERK" : "MAATWERK"}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  function NieuwAttrForm({ as, label }) {
-    return (
-      <div style={{ marginTop: 12, padding: 12, border: "1px dashed var(--border)", background: "rgba(0,200,255,0.02)" }}>
-        <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--accent)", letterSpacing: 2, marginBottom: 8 }}>
-          + ATTRIBUUT TOEVOEGEN
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <input
-            placeholder="Attribuutnaam"
-            value={newAttr[as].name}
-            onChange={e => setNewAttr(s => ({ ...s, [as]: { ...s[as], name: e.target.value } }))}
-            style={{ background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text)", padding: "6px 10px", fontFamily: "DM Mono", fontSize: 11, flex: "1 1 140px" }}
-          />
-          <input
-            placeholder="Waarden (komma-gescheiden)"
-            value={newAttr[as].waarden}
-            onChange={e => setNewAttr(s => ({ ...s, [as]: { ...s[as], waarden: e.target.value } }))}
-            style={{ background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text)", padding: "6px 10px", fontFamily: "DM Mono", fontSize: 11, flex: "2 1 200px" }}
-          />
-          <button
-            onClick={() => addCustomAttr(as)}
-            style={{ padding: "6px 16px", background: "none", border: "1px solid var(--accent)", color: "var(--accent)", fontFamily: "DM Mono", fontSize: 10, cursor: "pointer", letterSpacing: 1 }}
-          >VOEG TOE</button>
-        </div>
-      </div>
-    );
-  }
+  const asProps = { isClusterFn: isCluster, toggleClusterFn: toggleCluster, getWaardeFn: getWaarde, setWaardeFn: setWaarde, pdokTypeData: pdokData };
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 16 }}>
-      {/* Objecttype selector */}
+      {/* Boomstructuur */}
       <div className="tree-panel">
         <div className="sidebar-title">// Objecttype · IMWA</div>
         {OBJECTTYPEN.map(o => (
-          <div
-            key={o.id}
+          <div key={o.id}
             className={`tree-node ${selected === o.id ? "selected" : ""}`}
-            onClick={() => setSelected(o.id)}
-          >
-            <span style={{ color: TYPE_COLORS[o.id], marginRight: 6 }}>▸</span>
+            onClick={() => setSelected(o.id)}>
+            <span style={{ color: TYPE_COLORS[o.id] || "#888", marginRight: 6 }}>▸</span>
             {o.label}
             <span style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", float: "right" }}>
-              {o.count ?? "—"}
+              {pdokTotalen[o.id] ?? "—"}
             </span>
           </div>
         ))}
@@ -2544,32 +2734,25 @@ function DecompositieTab() {
       {/* Hoofdpaneel */}
       <div>
         {/* Header */}
-        <div style={{ background: "var(--panel)", border: "1px solid var(--border)", padding: "16px 20px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: TYPE_COLORS[selected] }}>{obj?.label}</div>
+        <div style={{ background: "var(--panel)", border: "1px solid var(--border)", padding: "14px 20px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: TYPE_COLORS[selected] || "#888" }}>{obj?.label}</div>
           <div style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--muted)" }}>
-            DAMO 2.6 · IMWA · {obj?.count ?? "?"} objecten in AGV
+            DAMO 2.6 · IMWA{liveN ? ` · ${liveN} objecten AGV (PDOK)` : ""}
           </div>
 
           {/* Reload knop */}
-          <button onClick={reloadPdok} disabled={loadingPdok} style={{
-            background: "none",
-            border: `1px solid ${pdokStatus === "done" ? "var(--accent2)" : pdokStatus === "error" ? "var(--danger)" : "var(--accent)"}`,
-            color: pdokStatus === "done" ? "var(--accent2)" : pdokStatus === "error" ? "var(--danger)" : "var(--accent)",
-            padding: "5px 12px", cursor: loadingPdok ? "wait" : "pointer",
+          <button onClick={reloadPdok} disabled={loadStat === "loading"} style={{
+            background: "none", padding: "5px 12px", cursor: loadStat === "loading" ? "wait" : "pointer",
             fontFamily: "DM Mono", fontSize: 9, letterSpacing: 1,
-            opacity: loadingPdok ? 0.6 : 1,
+            border: `1px solid ${loadStat === "done" ? "var(--accent2)" : loadStat === "error" ? "var(--danger)" : "var(--accent)"}`,
+            color: loadStat === "done" ? "var(--accent2)" : loadStat === "error" ? "var(--danger)" : "var(--accent)",
+            opacity: loadStat === "loading" ? 0.6 : 1,
           }}>
-            {loadingPdok ? "⏳ LADEN..." :
-             pdokStatus === "done" ? `✓ PDOK LIVE · n=${pdokN}` :
-             pdokStatus === "error" ? "✗ FOUT · HERLAAD" :
+            {loadStat === "loading" ? "⏳ LADEN..." :
+             loadStat === "done"    ? `✓ PDOK LIVE · n=${pdokData?.n}` :
+             loadStat === "error"   ? "✗ FOUT · HERLAAD" :
              "↻ LAAD PDOK-AANTALLEN"}
           </button>
-
-          {pdokStatus === "done" && (
-            <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)" }}>
-              {pdokN} objecten geanalyseerd · bbox AGV
-            </div>
-          )}
 
           <div style={{ marginLeft: "auto", display: "flex", gap: 16 }}>
             <div style={{ textAlign: "right" }}>
@@ -2583,83 +2766,124 @@ function DecompositieTab() {
           </div>
         </div>
 
-        {/* ─── As 1: Functionele as (DAMO) ─── */}
+        {/* As 1: Functionele as */}
         <div style={{ background: "var(--panel)", border: "1px solid var(--border)", padding: 20, marginBottom: 16 }}>
           <div className="axis-title">Functionele as · DAMO 2.6-attributen</div>
           <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", marginBottom: 14, letterSpacing: 1 }}>
-            KLIK OP EEN ATTRIBUUT OM HET MEE TE NEMEN ALS CLUSTERATTRIBUUT · BRON: DAMO 2.6 HET WATERSCHAPSHUIS
+            KLIK OP ATTRIBUUT OM MEE TE NEMEN ALS CLUSTERATTRIBUUT · BRON: DAMO 2.6 HET WATERSCHAPSHUIS
           </div>
-          {damoAttrs.length > 0 ? (
-            <>
-              {/* Watersysteem-attributen */}
-              {damoAttrs.filter(a => a.model === "Watersysteem").length > 0 && (
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--accent)", letterSpacing: 2, marginBottom: 6, paddingLeft: 4 }}>
-                    MODEL: WATERSYSTEEM
-                  </div>
-                  {damoAttrs.filter(a => a.model === "Watersysteem").map(attr => (
-                    <AttrBlok key={attr.name} attr={attr} bronLabel="DAMO 2.6" />
-                  ))}
-                </div>
-              )}
-              {/* Keringen-attributen */}
-              {damoAttrs.filter(a => a.model === "Keringen").length > 0 && (
-                <div>
-                  <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--warn)", letterSpacing: 2, marginBottom: 6, paddingLeft: 4, marginTop: 8 }}>
-                    MODEL: KERINGEN
-                  </div>
-                  {damoAttrs.filter(a => a.model === "Keringen").map(attr => (
-                    <AttrBlok key={attr.name} attr={attr} bronLabel="DAMO 2.6" />
-                  ))}
-                </div>
-              )}
-              {/* Overige attributen zonder model */}
-              {damoAttrs.filter(a => !a.model).map(attr => (
-                <AttrBlok key={attr.name} attr={attr} bronLabel="DAMO 2.6" />
-              ))}
-            </>
-          ) : (
+          {damoAttrs.length === 0 ? (
             <div style={{ fontFamily: "DM Mono", fontSize: 11, color: "var(--muted)", padding: 12 }}>
               Geen DAMO-attributen beschikbaar voor dit objecttype
             </div>
+          ) : (
+            <>
+              {["Watersysteem","Keringen","Watersysteem/Keringen"].map(model => {
+                const attrs = damoAttrs.filter(a => a.model === model);
+                if (!attrs.length) return null;
+                return (
+                  <div key={model} style={{ marginBottom: 12 }}>
+                    <div style={{ fontFamily: "DM Mono", fontSize: 9, letterSpacing: 2, marginBottom: 6, paddingLeft: 4,
+                      color: model === "Keringen" ? "var(--warn)" : "var(--accent)" }}>
+                      MODEL: {model.toUpperCase()}
+                    </div>
+                    {attrs.map(attr => <AttrBlok key={attr.name} attr={attr} {...asProps} />)}
+                  </div>
+                );
+              })}
+              {damoAttrs.filter(a => !["Watersysteem","Keringen","Watersysteem/Keringen"].includes(a.model)).map(attr =>
+                <AttrBlok key={attr.name} attr={attr} {...asProps} />
+              )}
+            </>
           )}
         </div>
 
-        {/* ─── As 2: Context-as (zelf) ─── */}
+        {/* As 2: Context */}
         <div style={{ background: "var(--panel)", border: "1px solid var(--border)", padding: 20, marginBottom: 16 }}>
           <div className="axis-title">Context-as · Omgevingsattributen</div>
           <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", marginBottom: 14, letterSpacing: 1 }}>
-            ZELF GEDEFINIEERD · NIET UIT DAMO · VOEG TOE OF WIJZIG
+            ZELF GEDEFINIEERD · NIET UIT DAMO
           </div>
-          {ctxAttrs.map(attr => <AttrBlok key={attr.name} attr={attr} bronLabel="eigen" />)}
-          <NieuwAttrForm as="ctx" label="Context" />
+          {ctxAttrs.map(attr => <AttrBlok key={attr.name} attr={attr} {...asProps} />)}
+          <NieuwAttrForm asKey="ctx" label="Context" onAdd={addCtxAttr} />
         </div>
 
-        {/* ─── As 3: RAMS-as (zelf) ─── */}
+        {/* As 3: RAMS */}
         <div style={{ background: "var(--panel)", border: "1px solid var(--border)", padding: 20 }}>
           <div className="axis-title">RAMS-as · Beheer & Betrouwbaarheid</div>
           <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", marginBottom: 14, letterSpacing: 1 }}>
-            ZELF GEDEFINIEERD · NEN2767-4 · OBS/OBG · VOEG TOE OF WIJZIG
+            ZELF GEDEFINIEERD · NEN2767-4 · OBS/OBG
           </div>
-          {rmAttrs.map(attr => <AttrBlok key={attr.name} attr={attr} bronLabel="eigen" />)}
-          <NieuwAttrForm as="rams" label="RAMS" />
+          {ramsAttrs.map(attr => <AttrBlok key={attr.name} attr={attr} {...asProps} />)}
+          <NieuwAttrForm asKey="rams" label="RAMS" onAdd={addRamsAttr} />
         </div>
       </div>
     </div>
   );
 }
 
-function AnalyseTab() {
+
+// ─── Analyse Tab ──────────────────────────────────────────────────────────────
+const BULK_MATRIX = [
+  { context: "Boerenland", rams: "Kritisch", count: 134 },
+  { context: "Boerenland", rams: "Normaal",  count: 1876 },
+  { context: "Boerenland", rams: "Laag",     count: 881 },
+  { context: "Woongebied", rams: "Kritisch", count: 412 },
+  { context: "Woongebied", rams: "Normaal",  count: 689 },
+  { context: "Woongebied", rams: "Laag",     count: 133 },
+  { context: "Broedgebied",rams: "Kritisch", count: 89 },
+  { context: "Broedgebied",rams: "Normaal",  count: 345 },
+  { context: "Broedgebied",rams: "Laag",     count: 178 },
+];
+const CONTEXT_TYPEN = ["Boerenland","Woongebied","Broedgebied"];
+const RAMS_TYPEN    = ["Kritisch","Normaal","Laag"];
+
+function AnalyseTab({ pdokTotalen }) {
   const [selectedCell, setSelectedCell] = useState(null);
-  const maxCount = Math.max(...BULK_MATRIX.map(c => c.count));
+  const maxMatrix = Math.max(...BULK_MATRIX.map(c => c.count));
+
+  // Dynamisch totaal op basis van live PDOK data
+  const totaalLive = Object.values(pdokTotalen).reduce((s, n) => s + (n || 0), 0);
+  const heeftLive  = totaalLive > 0;
 
   return (
     <div className="analyse-layout">
+      {/* Objecttype verdeling */}
+      <div className="chart-panel">
+        <div className="chart-title">// Objecttype verdeling · PDOK live</div>
+        <div className="chart-sub">
+          {heeftLive
+            ? `${totaalLive} objecten geladen via PDOK (AGV, bbox)`
+            : "Laad objecttypen via kaart of attribuuttab om aantallen te zien"}
+        </div>
+        {OBJECTTYPEN.map(o => {
+          const n   = pdokTotalen[o.id] || 0;
+          const max = heeftLive ? totaalLive : 1;
+          const pct = heeftLive && n > 0 ? Math.round((n / max) * 100) : 0;
+          return (
+            <div className="bar-item" key={o.id}>
+              <div className="bar-label">{o.label}</div>
+              <div className="bar-track">
+                {pct > 0 && <div className="bar-fill" style={{ width: `${Math.min(pct, 100)}%`, background: TYPE_COLORS[o.id] || "#888" }} />}
+              </div>
+              <div className="bar-value" style={{ color: n > 0 ? "var(--accent2)" : "var(--muted)" }}>
+                {n > 0 ? n : "—"}
+              </div>
+            </div>
+          );
+        })}
+        {!heeftLive && (
+          <div style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--muted)", marginTop: 12, padding: 8, border: "1px solid var(--border)" }}>
+            ← Gebruik tab 01 Kaart of 02 Attributen reload om live aantallen te laden
+          </div>
+        )}
+      </div>
+
       <div className="chart-row">
         {/* Context verdeling */}
         <div className="chart-panel">
-          <div className="chart-title">// Context-as verdeling</div>
-          <div className="chart-sub">Alle kunstwerken AGV naar omgevingstype</div>
+          <div className="chart-title">// Context-as verdeling (indicatief)</div>
+          <div className="chart-sub">Omgevingstype — demo-data, te vullen vanuit workshops</div>
           {CONTEXT_VERDELING.map(item => (
             <div className="bar-item" key={item.label}>
               <div className="bar-label">{item.label}</div>
@@ -2673,8 +2897,8 @@ function AnalyseTab() {
 
         {/* RAMS verdeling */}
         <div className="chart-panel">
-          <div className="chart-title">// RAMS-as verdeling</div>
-          <div className="chart-sub">Alle kunstwerken AGV naar kritikaliteit</div>
+          <div className="chart-title">// RAMS-as verdeling (indicatief)</div>
+          <div className="chart-sub">Kritikaliteit — demo-data, te vullen vanuit workshops</div>
           {RAMS_VERDELING.map(item => (
             <div className="bar-item" key={item.label}>
               <div className="bar-label">{item.label}</div>
@@ -2684,55 +2908,28 @@ function AnalyseTab() {
               <div className="bar-value">{item.count}</div>
             </div>
           ))}
-
-          <div style={{ marginTop: 24 }}>
-            <div className="chart-title">// Objecttype verdeling</div>
-            <div className="chart-sub">Aantallen per IMWA-type</div>
-            {OBJECTTYPEN.map(o => {
-              const totaalObjecten = OBJECTTYPEN.reduce((s, o) => s + (o.count || 0), 0);
-              const pct = o.count && totaalObjecten ? Math.round((o.count / totaalObjecten) * 100) : 0;
-              return (
-                <div className="bar-item" key={o.id}>
-                  <div className="bar-label">{o.label}</div>
-                  <div className="bar-track">
-                    <div className="bar-fill" style={{ width: `${pct}%`, background: TYPE_COLORS[o.id] }} />
-                  </div>
-                  <div className="bar-value">{o.count ?? "—"}</div>
-                </div>
-              );
-            })}
-          </div>
         </div>
       </div>
 
       {/* Bulk matrix */}
       <div className="chart-panel">
-        <div className="chart-title">// Bulk-matrix · Context × RAMS</div>
-        <div className="chart-sub">Aantal objecten per combinatie van assen — basis voor eisenset-clustering</div>
-
+        <div className="chart-title">// Bulk-matrix · Context × RAMS (indicatief)</div>
+        <div className="chart-sub">Demo-data — basis voor eisenset-clustering. Klik cel voor detail.</div>
         <div style={{ display: "grid", gridTemplateColumns: `120px repeat(${RAMS_TYPEN.length}, 1fr)`, gap: 4, marginTop: 16 }}>
           <div className="matrix-cell matrix-header" />
-          {RAMS_TYPEN.map(r => (
-            <div key={r} className="matrix-cell matrix-header">{r}</div>
-          ))}
+          {RAMS_TYPEN.map(r => <div key={r} className="matrix-cell matrix-header">{r}</div>)}
           {CONTEXT_TYPEN.map(ctx => (
             <React.Fragment key={ctx}>
               <div className="matrix-cell matrix-header">{ctx}</div>
               {RAMS_TYPEN.map(rams => {
                 const cell = BULK_MATRIX.find(c => c.context === ctx && c.rams === rams);
                 const count = cell?.count || 0;
-                const intensity = count / maxCount;
-                const isSelected = selectedCell?.context === ctx && selectedCell?.rams === rams;
+                const intensity = count / maxMatrix;
+                const isSel = selectedCell?.context === ctx && selectedCell?.rams === rams;
                 return (
-                  <div
-                    key={rams}
-                    className={`matrix-cell ${isSelected ? "selected" : ""}`}
-                    style={{
-                      background: `rgba(0,200,255,${intensity * 0.3})`,
-                      borderColor: isSelected ? "var(--accent)" : "var(--border)",
-                    }}
-                    onClick={() => setSelectedCell(isSelected ? null : { context: ctx, rams })}
-                  >
+                  <div key={rams} className="matrix-cell"
+                    style={{ background: `rgba(0,200,255,${intensity * 0.3})`, borderColor: isSel ? "var(--accent)" : "var(--border)" }}
+                    onClick={() => setSelectedCell(isSel ? null : { context: ctx, rams })}>
                     <div className="matrix-count">{count}</div>
                     <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)" }}>objecten</div>
                     {count > 500 && <div style={{ fontFamily: "DM Mono", fontSize: 8, color: "var(--bulk)", marginTop: 2 }}>BULK CLUSTER</div>}
@@ -2742,7 +2939,6 @@ function AnalyseTab() {
             </React.Fragment>
           ))}
         </div>
-
         {selectedCell && (
           <div style={{ marginTop: 16, padding: 12, background: "var(--panel2)", border: "1px solid var(--accent)", fontFamily: "DM Mono", fontSize: 11 }}>
             <span style={{ color: "var(--accent)" }}>// CLUSTER: </span>
@@ -2750,7 +2946,7 @@ function AnalyseTab() {
             <span className="tag rams">{selectedCell.rams}</span>
             <span style={{ color: "var(--muted)", marginLeft: 8 }}>
               → {BULK_MATRIX.find(c => c.context === selectedCell.context && c.rams === selectedCell.rams)?.count} objecten
-              → {BULK_MATRIX.find(c => c.context === selectedCell.context && c.rams === selectedCell.rams)?.count > 500 ? "aanbevolen voor één bulk-eisenset" : "mogelijk maatwerk vereist"}
+              → {BULK_MATRIX.find(c => c.context === selectedCell.context && c.rams === selectedCell.rams)?.count > 500 ? "aanbevolen voor bulk-eisenset" : "mogelijk maatwerk vereist"}
             </span>
           </div>
         )}
@@ -2759,10 +2955,12 @@ function AnalyseTab() {
   );
 }
 
-// ─── Hoofdapp ────────────────────────────────────────────────────────────────
+// ─── Hoofdapp ─────────────────────────────────────────────────────────────────
 function App() {
-  const [tab, setTab] = useState("kaart");
+  const [tab, setTab]               = useState("kaart");
   const [typeFilter, setTypeFilter] = useState("all");
+  // Gedeelde PDOK-aantallen tussen tabs — gevuld door Kaart of Attribuut reload
+  const [pdokTotalen, setPdokTotalen] = useState({});
 
   return (
     <>
@@ -2781,9 +2979,9 @@ function App() {
 
       <div className="tabs">
         {[
-          { id: "kaart", label: "01 · Kaart" },
-          { id: "decompositie", label: "02 · Attributen" },
-          { id: "analyse", label: "03 · Analyse" },
+          { id: "kaart",       label: "01 · Kaart" },
+          { id: "decompositie",label: "02 · Attributen" },
+          { id: "analyse",     label: "03 · Analyse" },
         ].map(t => (
           <button key={t.id} className={`tab ${tab === t.id ? "active" : ""}`} onClick={() => setTab(t.id)}>
             {t.label}
@@ -2792,9 +2990,9 @@ function App() {
       </div>
 
       <div className="main">
-        {tab === "kaart" && <KaartTab typeFilter={typeFilter} setTypeFilter={setTypeFilter} />}
-        {tab === "decompositie" && <DecompositieTab />}
-        {tab === "analyse" && <AnalyseTab />}
+        {tab === "kaart"        && <KaartTab pdokTotalen={pdokTotalen} setPdokTotalen={setPdokTotalen} />}
+        {tab === "decompositie" && <DecompositieTab pdokTotalen={pdokTotalen} setPdokTotalen={setPdokTotalen} />}
+        {tab === "analyse"      && <AnalyseTab pdokTotalen={pdokTotalen} />}
       </div>
     </>
   );
