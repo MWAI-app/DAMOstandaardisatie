@@ -1617,9 +1617,22 @@ function StatRow({ data }) {
 
 // ─── PDOK Configuratie ────────────────────────────────────────────────────────
 const BRONHOUDERS = {
-  "W0155": { label: "Amstel, Gooi en Vecht (AGV)", center: [52.30, 4.95], zoom: 10 },
-  "W0616": { label: "Hoogheemraadschap van Rijnland", center: [52.15, 4.50], zoom: 10 },
-  "W0636": { label: "De Stichtse Rijnlanden", center: [52.05, 5.10], zoom: 10 },
+  "W0155": {
+    label: "Amstel, Gooi en Vecht (AGV)",
+    center: [52.30, 4.95], zoom: 10,
+    // Bounding box AGV beheergebied (WGS84: minLon, minLat, maxLon, maxLat)
+    bbox: "4.65,52.10,5.25,52.55",
+  },
+  "W0616": {
+    label: "Hoogheemraadschap van Rijnland",
+    center: [52.15, 4.50], zoom: 10,
+    bbox: "4.20,51.95,4.80,52.35",
+  },
+  "W0636": {
+    label: "De Stichtse Rijnlanden",
+    center: [52.05, 5.10], zoom: 10,
+    bbox: "4.80,51.85,5.45,52.25",
+  },
 };
 
 // PDOK collecties per IMWA objecttype
@@ -1682,9 +1695,9 @@ function LeafletKaart({ typeFilter, setTypeFilter, bronhouder, setBronhouder }) 
     const kleur = TYPE_COLORS[type] || "#888";
 
     try {
-      // Ophalen met paginatie — max 5000 objecten
+      // Ophalen met bbox filter op beheergebied + paginatie
       let allFeatures = [];
-      let url = `${PDOK_BASE}/${collectieNaam}/items?f=json&limit=1000`;
+      let url = `${PDOK_BASE}/${collectieNaam}/items?f=json&limit=1000&bbox=${bron.bbox}`;
       let paginas = 0;
 
       while (url && paginas < 5) {
@@ -1773,7 +1786,7 @@ function LeafletKaart({ typeFilter, setTypeFilter, bronhouder, setBronhouder }) 
             PDOK · Waterschappen Kunstwerken IMWA
           </div>
           <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", marginTop: 2 }}>
-            Bronhouder: <span style={{ color: "var(--accent)" }}>{bronhouder}</span> — {bron.label}
+            Filter: bbox beheergebied {bronhouder}
           </div>
           <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)" }}>
             api.pdok.nl/hwh/waterschappen-kunstwerken-imwa/ogc/v1
