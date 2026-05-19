@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <title>PDOK Diagnose</title>
+  <style>
+    body { font-family: monospace; background: #0b1220; color: #d0e4f7; padding: 20px; font-size: 12px; }
+    h2 { color: #00c8ff; letter-spacing: 2px; font-size: 13px; margin-top: 24px; }
+    button { background: none; border: 1px solid #00c8ff; color: #00c8ff; padding: 8px 16px; cursor: pointer; margin: 4px; font-family: monospace; }
+    button:hover { background: rgba(0,200,255,0.1); }
+    .panel { background: #111c2e; border: 1px solid #1e3a5f; padding: 16px; margin-top: 12px; }
+    .row { display: grid; grid-template-columns: 180px 1fr; gap: 8px; padding: 4px 0; border-bottom: 1px solid #1e3a5f; }
+    .key { color: #5a7a9a; }
+    .val { color: #d0e4f7; word-break: break-all; }
+    .val.accent { color: #00c8ff; }
+    .val.warn { color: #ffb347; }
+    .val.good { color: #00ff9d; }
+    .status { padding: 8px; margin-bottom: 12px; }
+    .count { font-size: 24px; color: #00c8ff; }
+    pre { background: #162035; padding: 12px; overflow-x: auto; white-space: pre-wrap; font-size: 11px; max-height: 400px; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #162035; color: #00c8ff; padding: 6px 8px; text-align: left; font-size: 10px; letter-spacing: 1px; }
+    td { padding: 5px 8px; border-bottom: 1px solid #1e3a5f; font-size: 11px; }
+    tr:hover td { background: rgba(0,200,255,0.05); }
+    .tag { display: inline-block; padding: 2px 6px; border: 1px solid #1e3a5f; font-size: 10px; margin: 1px; }
+  </style>
+</head>
+<body>
+
+<h1 style="color:#00c8ff;font-size:16px;letter-spacing:3px;">// PDOK DIAGNOSE TOOL</h1>
+<p style="color:#5a7a9a;">Inspecteert ruwe PDOK OGC API response — toont exacte velden en waarden per object</p>
+
+<h2>STAP 1 · KIES COLLECTIE</h2>
+<div>
+  <button onclick="fetchCollectie('brug')">brug</button>
+  <button onclick="fetchCollectie('stuw')">stuw</button>
+  <button onclick="fetchCollectie('gemaal')">gemaal</button>
+  <button onclick="fetchCollectie('duikersifon')">duikersifon</button>
+  <button onclick="fetchCollectie('sluis')">sluis</button>
+  <button onclick="fetchCollectie('afsluitmiddel')">afsluitmiddel</button>
+</div>
+
+<div style="margin-top:8px;color:#5a7a9a;font-size:11px;">
+  Bbox AGV: 4.65,52.10,5.25,52.55 · limit: 5
+</div>
+
+<div id="status" class="panel" style="display:none"></div>
+
+<h2>STAP 2 · RUWE API RESPONSE (eerste 5 objecten)</h2>
+<div id="raw" class="panel">
+  <span style="color:#5a7a9a;">← Kies een collectie hierboven</span>
+</div>
+
+<h2>STAP 3 · ALLE VELDEN VAN OBJECT #1</h2>
+<div id="fields" class="panel">
+  <span style="color:#5a7a9a;">← Kies een collectie hierboven</span>
+</div>
+
+<h2>STAP 4 · TABEL EERSTE 5 OBJECTEN</h2>
+<div id="table" class="panel">
+  <span style="color:#5a7a9a;">← Kies een collectie hierboven</span>
+</div>
+
+<script>
+const PDOK_BASE = "https://api.pdok.nl/hwh/waterschappen-kunstwerken-imwa/ogc/v1/collections";
+const BBOX = "4.65,52.10,5.25,52.55";
+
+async function fetchCollectie(naam) {
+  const statusEl = document.getElementById('status');
+  const rawEl = document.getElementById('raw');
+  const fieldsEl = document.getElementById('fields');
+  const tableEl = document.getElementById('table');
+
+  statusEl.style.display = 'block';
+  statusEl.innerHTML = `<span style="color:#ffb347">⏳ Ophalen van PDOK: ${naam} ...</span>`;
+  rawEl.innerHTML = '...';
+  fieldsEl.innerHTML = '...';
+  tableEl.innerHTML = '...';
+
+  const url = `${PDOK_BASE}/${naam}/items?f=json&limit=5&bbox=${BBOX}`;
+
+  try {
+    const resp = await fetch(url);
+    const statusCode = resp.status;
+
+    if (!resp.ok) {
+      statusEl.innerHTML = `<span style="color:#ff4d6d">✗ HTTP ${statusCode} — collectienaam '${naam}' bestaat mogelijk niet</span>
+        <br/><span style="color:#5a7a9a">URL geprobeerd: ${url}</span>`;
+      return;
+    }
+
+    const data = await resp.json();
+    const features = data.features || [];
+    const totaal = data.numberMatched ?? data.numberReturned ?? '?';
+
+    statusEl.innerHTML = `
+      <div class="count">${features.length}</div>
+      <div>objecten ontvangen in bbox AGV</div>
+      <div style="color:#5a7a9a;margin-top:4px">numberMatched (totaal in bbox): <span style="color:#00c8ff">${data.numberMatched ?? 'niet opgegeven'}</span></div>
+      <div style="color:#5a7a9a">numberReturned: <span style="color:#00c8ff">${data.numberReturned ?? features.length}</span></div>
+      <div style="color:#5a7a9a;margin-top:4px">URL: <span style="color:#00ff9d">${url}</span></div>
+    `;
+
+    // Ruwe JSON
+    rawEl.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+
+    if (features.length === 0) {
+      fieldsEl.innerHTML = '<span style="color:#ffb347">Geen objecten gevonden in deze bbox. Probeer een andere collectienaam of bbox.</span>';
+      tableEl.innerHTML = '<span style="color:#ffb347">Geen data.</span>';
+      return;
+    }
+
+    // Alle velden van object #1
+    const props = features[0].properties || {};
+    const geom = features[0].geometry || {};
+    let html = '<table><tr><th>VELD</th><th>WAARDE</th><th>TYPE</th></tr>';
+
+    // Geometrie eerst
+    html += `<tr><td style="color:#00c8ff">geometry.type</td><td>${geom.type || '—'}</td><td>geometrie</td></tr>`;
+    if (geom.coordinates) {
+      html += `<tr><td style="color:#00c8ff">geometry.coordinates</td><td>${JSON.stringify(geom.coordinates)}</td><td>geometrie</td></tr>`;
+    }
+
+    // Properties
+    for (const [k, v] of Object.entries(props)) {
+      const type = v === null ? 'null' : typeof v;
+      html += `<tr><td style="color:#ffb347">${k}</td><td>${v === null ? '<span style="color:#5a7a9a">null</span>' : v}</td><td style="color:#5a7a9a">${type}</td></tr>`;
+    }
+    html += '</table>';
+    fieldsEl.innerHTML = html;
+
+    // Tabel alle 5 objecten — alle properties als kolommen
+    const allKeys = [...new Set(features.flatMap(f => Object.keys(f.properties || {})))];
+    let thtml = '<table><tr><th>#</th><th>GEOMETRIE</th>';
+    for (const k of allKeys) thtml += `<th>${k}</th>`;
+    thtml += '</tr>';
+
+    features.forEach((f, i) => {
+      const p = f.properties || {};
+      const coords = f.geometry?.coordinates;
+      thtml += `<tr><td>${i+1}</td><td style="color:#00c8ff">${coords ? `[${coords[1]?.toFixed(4)}, ${coords[0]?.toFixed(4)}]` : '—'}</td>`;
+      for (const k of allKeys) {
+        const v = p[k];
+        thtml += `<td>${v === null || v === undefined ? '<span style="color:#5a7a9a">—</span>' : v}</td>`;
+      }
+      thtml += '</tr>';
+    });
+    thtml += '</table>';
+    tableEl.innerHTML = thtml;
+
+  } catch(err) {
+    statusEl.innerHTML = `<span style="color:#ff4d6d">✗ Fout: ${err.message}</span>`;
+    rawEl.innerHTML = `<pre>${err.stack}</pre>`;
+  }
+}
+</script>
+</body>
+</html>
