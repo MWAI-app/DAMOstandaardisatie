@@ -2142,23 +2142,157 @@ function KaartTab({ typeFilter, setTypeFilter }) {
     />
   );
 }
+// ─── PDOK attribuut-data per type (uit diagnose JSON) ──────────────────────
+// Gevulde velden uit sample van 10 AGV-objecten — bron: PDOK OGC API
+const PDOK_FILL_DATA = {
+  stuw: {
+    typemateriaal:      { pct: 100, waarden: ["beton", "hout"] },
+    indicatiewaterkerend:{ pct: 100, waarden: ["Ja", "Nee"] },
+    kruinbreedte:       { pct:  50, waarden: ["1.5", "2.7", "3.0", "3.54", "5.0"] },
+    typestuw:           { pct:  40, waarden: ["schuifstuw", "vaste stuw"] },
+    hoofdfunctiestuw:   { pct:  30, waarden: ["overlaten"] },
+    hoogteconstructie:  { pct:  30, waarden: ["-0.91", "-1.66", "-1.86"] },
+  },
+  gemaal: {
+    naam:               { pct: 100, waarden: ["Gemaal De Tol","Loenderveen","Maarsseveen-Westbroek","Poldergemaal De Onrust","Poldergemaal Portengen"] },
+    indicatiewaterkerend:{ pct: 50, waarden: ["Ja"] },
+  },
+  brug: {
+    lengte:             { pct: 100, waarden: ["1.65", "2.05", "2.32", "2.44", "2.55", "2.58", "2.62", "2.71"] },
+  },
+  sluis: {
+    typesluis:          { pct: 100, waarden: ["keersluis", "schutsluis naar een zijde", "uitwateringssluis/spuisluis"] },
+    naam:               { pct: 100, waarden: ["Diemerdammersluis","Muidertrekvaart","NK Angstel (Abcoude)","NK Angstel (Baambrugge)"] },
+    breedte:            { pct: 100, waarden: ["4.51", "4.87", "4.98", "5.83", "6.2", "6.28", "6.8", "12.0"] },
+    hoogtedrempel:      { pct: 100, waarden: ["-0.69", "-1.96", "-2.17", "-2.55", "-2.56", "-2.60"] },
+    kerendehoogte:      { pct:  90, waarden: ["0.17", "0.22", "0.35", "0.40", "0.50", "0.64", "0.93"] },
+    doorvaartbreedte:   { pct:  80, waarden: ["2.33", "4.49", "4.51", "5.38", "6.5", "8.32"] },
+    hoogtebinnenonderkantben: { pct: 80, waarden: ["-1.76", "-2.02", "-2.28", "-2.54", "-2.73", "-3.48"] },
+    hoogtebinnenonderkantbov: { pct: 80, waarden: ["-1.89", "-2.02", "-2.22", "-2.55", "-2.73", "-3.48"] },
+  },
+  afsluitmiddel: {
+    typemateriaal:      { pct:  10, waarden: ["metselwerk"] },
+    breedteafsluitmiddel:{ pct: 10, waarden: ["0.4"] },
+  },
+  vispassage: {
+    typevispassage:     { pct:  90, waarden: ["vissluis", "vistrap", "onbekend"] },
+    breedteopening:     { pct:  20, waarden: ["0.2", "0.6"] },
+  },
+  coupure: {
+    breedteopening:     { pct:  10, waarden: ["3.75"] },
+    hoogtedrempel:      { pct:  10, waarden: ["0.8"] },
+    sluitpeil:          { pct:  10, waarden: ["1.86"] },
+  },
+  put: {
+    typeput:            { pct:  90, waarden: ["ontvangstput"] },
+  },
+};
+
+const PDOK_BASE_ATTR = "https://api.pdok.nl/hwh/waterschappen-kunstwerken-imwa/ogc/v1/collections";
+const AGV_WB = "Waterschap Amstel, Gooi en Vecht";
+const AGV_BBOX = "4.65,52.10,5.25,52.55";
+
 function DecompositieTab() {
   const [selected, setSelected] = useState("stuw");
-  // Per objecttype: welke attributen zijn clusterattributen (set van attr.name)
   const [clusterAttrs, setClusterAttrs] = useState({});
-  // Per objecttype+attribuut+waarde: "bulk" | "maatwerk" | null
   const [waardeStatus, setWaardeStatus] = useState({});
-  // Context-as: zelf aangemaakte attributen per objecttype
   const [contextAttrs, setContextAttrs] = useState({ stuw: DEFAULT_CONTEXT_ATTRS.map(a => ({ ...a, values: a.values.map(v => ({ ...v })) })) });
-  // RAMS-as: zelf aangemaakte attributen per objecttype
   const [ramsAttrs, setRamsAttrs] = useState({ stuw: DEFAULT_RAMS_ATTRS.map(a => ({ ...a, values: a.values.map(v => ({ ...v })) })) });
-  // Nieuw attribuut toevoegen state
   const [newAttr, setNewAttr] = useState({ ctx: { name: "", waarden: "" }, rams: { name: "", waarden: "" } });
+
+  // PDOK live counts per objecttype
+  const [pdokCounts, setPdokCounts] = useState({});   // { typeId: { attrName: { waarde: count } } }
+  const [loadingPdok, setLoadingPdok] = useState(false);
+  const [pdokStatus, setPdokStatus] = useState(null);  // null | "loading" | "done" | "error"
+  const [pdokN, setPdokN] = useState(0);
 
   const obj = OBJECTTYPEN.find(o => o.id === selected);
   const damoAttrs = DAMO_ATTRIBUTEN[selected] || [];
   const ctxAttrs = contextAttrs[selected] || DEFAULT_CONTEXT_ATTRS.map(a => ({ ...a, values: a.values.map(v => ({ ...v })) }));
   const rmAttrs = ramsAttrs[selected] || DEFAULT_RAMS_ATTRS.map(a => ({ ...a, values: a.values.map(v => ({ ...v })) }));
+
+  // Haal live attribuutwaarden op van PDOK voor huidig objecttype
+  async function reloadPdok() {
+    const collectie = obj?.pdokCollectie || selected;
+    setLoadingPdok(true);
+    setPdokStatus("loading");
+    setPdokN(0);
+
+    try {
+      // Haal max 200 objecten op voor statistische zekerheid
+      let allFeatures = [];
+      let url = `${PDOK_BASE_ATTR}/${collectie}/items?f=json&limit=200&bbox=${AGV_BBOX}`;
+      let pages = 0;
+      while (url && pages < 3) {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        const feats = (data.features || []).filter(f =>
+          !f.properties?.waterbeheerder || f.properties.waterbeheerder === AGV_WB
+        );
+        allFeatures = allFeatures.concat(feats);
+        const next = (data.links || []).find(l => l.rel === "next");
+        url = next ? next.href : null;
+        pages++;
+      }
+
+      const n = allFeatures.length;
+      setPdokN(n);
+
+      if (n === 0) { setPdokStatus("error"); setLoadingPdok(false); return; }
+
+      // Tel waarden per attribuut
+      const counts = {};
+      const allKeys = new Set(allFeatures.flatMap(f => Object.keys(f.properties || {})));
+      allKeys.forEach(k => {
+        const tally = {};
+        allFeatures.forEach(f => {
+          const v = f.properties[k];
+          if (v !== null && v !== undefined) {
+            const vs = String(v);
+            tally[vs] = (tally[vs] || 0) + 1;
+          }
+        });
+        if (Object.keys(tally).length > 0) counts[k] = tally;
+      });
+
+      setPdokCounts(prev => ({ ...prev, [selected]: { n, counts } }));
+      setPdokStatus("done");
+    } catch(err) {
+      console.error("PDOK reload fout:", err);
+      setPdokStatus("error");
+    }
+    setLoadingPdok(false);
+  }
+
+  // Haal count op voor een attribuut+waarde uit PDOK live data
+  function getLiveCount(attrName, waarde) {
+    const typeData = pdokCounts[selected];
+    if (!typeData) {
+      // Fallback: diagnose JSON data
+      const fallback = PDOK_FILL_DATA[selected]?.[attrName.toLowerCase()];
+      return fallback ? null : null; // null = nog niet geladen
+    }
+    const attrKey = Object.keys(typeData.counts).find(
+      k => k.toLowerCase() === attrName.toLowerCase()
+    );
+    if (!attrKey) return 0;
+    const waardeLower = String(waarde).toLowerCase();
+    const tally = typeData.counts[attrKey];
+    // Zoek case-insensitief
+    const match = Object.entries(tally).find(([k]) => k.toLowerCase() === waardeLower);
+    return match ? match[1] : 0;
+  }
+
+  function getLiveTotal(attrName) {
+    const typeData = pdokCounts[selected];
+    if (!typeData) return null;
+    const attrKey = Object.keys(typeData.counts).find(
+      k => k.toLowerCase() === attrName.toLowerCase()
+    );
+    if (!attrKey) return 0;
+    return Object.values(typeData.counts[attrKey]).reduce((s, v) => s + v, 0);
+  }
 
   function isCluster(attrName) {
     return !!(clusterAttrs[selected] && clusterAttrs[selected].has(attrName));
@@ -2254,12 +2388,14 @@ function DecompositieTab() {
           <div style={{ borderTop: "1px solid var(--border)", padding: "0 0 8px 0" }}>
             {/* Kolomkoppen */}
             <div style={{
-              display: "grid", gridTemplateColumns: "1fr 52px 80px 100px",
+              display: "grid", gridTemplateColumns: "1fr 80px 80px 100px",
               gap: 0, padding: "8px 14px 6px 42px",
               borderBottom: "1px solid var(--border)"
             }}>
               <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", letterSpacing: 1 }}>WAARDE</div>
-              <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", letterSpacing: 1, textAlign: "right" }}>AANTAL</div>
+              <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", letterSpacing: 1, textAlign: "right" }}>
+                AANTAL {pdokCounts[selected] ? <span style={{ color: "var(--accent2)" }}>LIVE</span> : ""}
+              </div>
               <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", letterSpacing: 1, textAlign: "center" }}>BULK</div>
               <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", letterSpacing: 1, textAlign: "center" }}>MAATWERK</div>
             </div>
@@ -2268,10 +2404,17 @@ function DecompositieTab() {
               const status = getWaardeStatus(attr.name, v.waarde);
               const isBulk = status === "bulk";
               const isMaatwerk = status === "maatwerk";
+              // Live count van PDOK, anders statische waarde
+              const liveCount = getLiveCount(attr.name, v.waarde);
+              const liveTotal = getLiveTotal(attr.name);
+              const displayCount = liveCount !== null ? liveCount : v.count;
+              const pct = liveCount !== null && liveTotal > 0
+                ? Math.round((liveCount / liveTotal) * 100)
+                : null;
               return (
                 <div key={v.waarde} style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr 52px 80px 100px",
+                  gridTemplateColumns: "1fr 80px 80px 100px",
                   gap: 0,
                   alignItems: "center",
                   padding: "9px 14px 9px 42px",
@@ -2290,12 +2433,20 @@ function DecompositieTab() {
                     fontWeight: (isBulk || isMaatwerk) ? 600 : 400,
                   }}>{v.waarde}</div>
 
-                  {/* Aantal */}
-                  <div style={{
-                    fontFamily: "DM Mono", fontSize: 12,
-                    color: "var(--muted)", textAlign: "right"
-                  }}>
-                    {v.count !== null ? v.count : "—"}
+                  {/* Aantal + percentage */}
+                  <div style={{ fontFamily: "DM Mono", fontSize: 11, textAlign: "right" }}>
+                    {displayCount !== null && displayCount !== undefined ? (
+                      <span style={{ color: liveCount !== null ? "var(--accent2)" : "var(--muted)" }}>
+                        {displayCount}
+                        {pct !== null && (
+                          <span style={{ fontSize: 9, color: "var(--muted)", marginLeft: 3 }}>
+                            {pct}%
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span style={{ color: "var(--muted)" }}>—</span>
+                    )}
                   </div>
 
                   {/* Bulk knop */}
@@ -2393,11 +2544,33 @@ function DecompositieTab() {
       {/* Hoofdpaneel */}
       <div>
         {/* Header */}
-        <div style={{ background: "var(--panel)", border: "1px solid var(--border)", padding: "16px 20px", marginBottom: 16, display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ background: "var(--panel)", border: "1px solid var(--border)", padding: "16px 20px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: TYPE_COLORS[selected] }}>{obj?.label}</div>
           <div style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--muted)" }}>
             DAMO 2.6 · IMWA · {obj?.count ?? "?"} objecten in AGV
           </div>
+
+          {/* Reload knop */}
+          <button onClick={reloadPdok} disabled={loadingPdok} style={{
+            background: "none",
+            border: `1px solid ${pdokStatus === "done" ? "var(--accent2)" : pdokStatus === "error" ? "var(--danger)" : "var(--accent)"}`,
+            color: pdokStatus === "done" ? "var(--accent2)" : pdokStatus === "error" ? "var(--danger)" : "var(--accent)",
+            padding: "5px 12px", cursor: loadingPdok ? "wait" : "pointer",
+            fontFamily: "DM Mono", fontSize: 9, letterSpacing: 1,
+            opacity: loadingPdok ? 0.6 : 1,
+          }}>
+            {loadingPdok ? "⏳ LADEN..." :
+             pdokStatus === "done" ? `✓ PDOK LIVE · n=${pdokN}` :
+             pdokStatus === "error" ? "✗ FOUT · HERLAAD" :
+             "↻ LAAD PDOK-AANTALLEN"}
+          </button>
+
+          {pdokStatus === "done" && (
+            <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)" }}>
+              {pdokN} objecten geanalyseerd · bbox AGV
+            </div>
+          )}
+
           <div style={{ marginLeft: "auto", display: "flex", gap: 16 }}>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontFamily: "DM Mono", fontSize: 18, color: "var(--accent)" }}>{clusterCount}</div>
