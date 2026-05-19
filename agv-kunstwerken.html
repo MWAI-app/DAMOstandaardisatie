@@ -1312,6 +1312,172 @@ const DAMO_ATTRIBUTEN = {
       ]
     },
   ],
+  // Bron: DAMO 2.6 Objectenhandboek Sluis — Het Waterschapshuis (2025)
+  sluis: [
+    {
+      name: "doorvaartbreedte", label: "Doorvaartbreedte", model: "Watersysteem",
+      type: "Double", eenheid: "m",
+      values: [
+        { waarde: "< 5m", count: null }, { waarde: "5 – 10m", count: null },
+        { waarde: "10 – 20m", count: null }, { waarde: "> 20m", count: null },
+      ]
+    },
+    {
+      name: "breedte", label: "Breedte (loodrecht op as)", model: "Watersysteem",
+      type: "Double", eenheid: "m",
+      values: [
+        { waarde: "< 5m", count: null }, { waarde: "5 – 10m", count: null },
+        { waarde: "10 – 20m", count: null }, { waarde: "> 20m", count: null },
+      ]
+    },
+    {
+      name: "typeSluis", label: "Type sluis", model: "Watersysteem",
+      type: "SluisType", eenheid: null,
+      values: [
+        { waarde: "Keersluis", count: null },
+        { waarde: "Uitwateringssluis/spuisluis", count: null },
+        { waarde: "Inlaatsluis", count: null },
+        { waarde: "Schutsluis naar één zijde", count: null },
+        { waarde: "Schutsluis naar twee zijden", count: null },
+        { waarde: "Keersluis naar twee zijden", count: null },
+        { waarde: "Damsluis", count: null },
+        { waarde: "Overig", count: null },
+      ]
+    },
+    {
+      name: "hoogteBinnenOnderkantBen", label: "Hoogte binnenonderkant benedenstrooms", model: "Watersysteem",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -2.0 m NAP", count: null }, { waarde: "-2.0 – -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null }, { waarde: "> 0.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "hoogteBinnenOnderkantBov", label: "Hoogte binnenonderkant bovenstrooms", model: "Watersysteem",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -2.0 m NAP", count: null }, { waarde: "-2.0 – -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null }, { waarde: "> 0.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "richting", label: "Richting (geografisch)", model: "Watersysteem",
+      type: "Single", eenheid: null,
+      values: [
+        { waarde: "Noord–Zuid", count: null }, { waarde: "Oost–West", count: null },
+        { waarde: "NW–ZO", count: null }, { waarde: "NO–ZW", count: null },
+      ]
+    },
+    {
+      name: "typeWaterkerendeConstructie", label: "Type waterkerende constructie", model: "Keringen",
+      type: "WaterkerendeConstructieType", eenheid: null,
+      values: [
+        { waarde: "Type I – zelfstandig waterkerend", count: null },
+        { waarde: "Type II – waterkerend i.c.m. grondconstructie", count: null },
+        { waarde: "Type III – waterkerend bij falen andere constructie", count: null },
+        { waarde: "Type IV – tast bij falen waterkering aan", count: null },
+      ]
+    },
+    {
+      name: "indicatieWaterkerend", label: "Indicatie waterkerend", model: "Keringen",
+      type: "JaNee", eenheid: null,
+      values: [ { waarde: "Ja", count: null }, { waarde: "Nee", count: null } ]
+    },
+    {
+      name: "categorieWaterkering", label: "Categorie waterkering", model: "Keringen",
+      type: "WaterkeringCategorie", eenheid: null,
+      values: [
+        { waarde: "Primair", count: null }, { waarde: "Regionaal", count: null }, { waarde: "Overig", count: null },
+      ]
+    },
+    {
+      name: "kerendeHoogte", label: "Kerende hoogte", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -1.0 m NAP", count: null }, { waarde: "-1.0 – 0.0 m NAP", count: null },
+        { waarde: "0.0 – 1.0 m NAP", count: null }, { waarde: "> 1.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "drempelpeil", label: "Drempelpeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -2.0 m NAP", count: null }, { waarde: "-2.0 – -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null }, { waarde: "> 0.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "filterUitstroming", label: "Filter uitstroming aanwezig", model: "Keringen",
+      type: "JaNee", eenheid: null,
+      values: [ { waarde: "Ja", count: null }, { waarde: "Nee", count: null } ]
+    },
+    {
+      name: "ontwerpBuitenWaterstand", label: "Ontwerp buitenwaterstand", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null }, { waarde: "0.0 – 1.0 m NAP", count: null },
+        { waarde: "1.0 – 2.0 m NAP", count: null }, { waarde: "> 2.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "breedteOpening", label: "Breedte opening", model: "Keringen",
+      type: "Double", eenheid: "m",
+      values: [
+        { waarde: "< 2m", count: null }, { waarde: "2 – 5m", count: null },
+        { waarde: "5 – 10m", count: null }, { waarde: "> 10m", count: null },
+      ]
+    },
+    {
+      name: "drempelhoogte", label: "Drempelhoogte", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -2.0 m NAP", count: null }, { waarde: "-2.0 – -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null }, { waarde: "> 0.0 m NAP", count: null },
+      ]
+    },
+  ],
+  // Bron: DAMO 2.6 Objectenhandboek Vispassage — Het Waterschapshuis (2025)
+  vispassage: [
+    {
+      name: "typeVispassage", label: "Type vispassage", model: "Watersysteem",
+      type: "VispassageType", eenheid: null,
+      values: [
+        { waarde: "Vislift", count: null }, { waarde: "Vistrap", count: 2 },
+        { waarde: "Aalpijp", count: null }, { waarde: "Vissluis", count: 6 },
+        { waarde: "Deniltrap", count: null }, { waarde: "Bekkentrap", count: null },
+        { waarde: "Lokstroomgemaal", count: null }, { waarde: "Overig", count: null },
+        { waarde: "Onbekend", count: 1 },
+      ]
+    },
+    {
+      name: "breedteOpening", label: "Breedte opening", model: "Keringen",
+      type: "Double", eenheid: "m",
+      values: [
+        { waarde: "< 0.5m", count: null }, { waarde: "0.5 – 1.0m", count: 2 },
+        { waarde: "1.0 – 2.0m", count: null }, { waarde: "> 2.0m", count: null },
+      ]
+    },
+    {
+      name: "indicatieWaterkerend", label: "Indicatie waterkerend", model: "Keringen",
+      type: "JaNee", eenheid: null,
+      values: [ { waarde: "Ja", count: null }, { waarde: "Nee", count: null } ]
+    },
+    {
+      name: "categorieWaterkering", label: "Categorie waterkering", model: "Keringen",
+      type: "WaterkeringCategorie", eenheid: null,
+      values: [
+        { waarde: "Primair", count: null }, { waarde: "Regionaal", count: null }, { waarde: "Overig", count: null },
+      ]
+    },
+    {
+      name: "kerendeHoogte", label: "Kerende hoogte", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -1.0 m NAP", count: null }, { waarde: "-1.0 – 0.0 m NAP", count: null },
+        { waarde: "0.0 – 1.0 m NAP", count: null }, { waarde: "> 1.0 m NAP", count: null },
+      ]
+    },
+  ],
   // Bron: DAMO 2.6 Objectenhandboek Afsluitmiddel — Het Waterschapshuis (2025)
   afsluitmiddel: [
     // ── Watersysteem-attributen ──────────────────────────────────────────
@@ -1602,196 +1768,6 @@ const DAMO_ATTRIBUTEN = {
         { waarde: "Nee", count: null },
       ]
     },
-  ],
-    // ── Watersysteem-attributen ──────────────────────────────────────────
-    {
-      name: "doorvaartbreedte", label: "Doorvaartbreedte", model: "Watersysteem",
-      type: "Double", eenheid: "m",
-      values: [
-        { waarde: "< 5m", count: null },
-        { waarde: "5 – 10m", count: null },
-        { waarde: "10 – 20m", count: null },
-        { waarde: "> 20m", count: null },
-      ]
-    },
-    {
-      name: "breedte", label: "Breedte (loodrecht op as)", model: "Watersysteem",
-      type: "Double", eenheid: "m",
-      values: [
-        { waarde: "< 5m", count: null },
-        { waarde: "5 – 10m", count: null },
-        { waarde: "10 – 20m", count: null },
-        { waarde: "> 20m", count: null },
-      ]
-    },
-    {
-      name: "typeSluis", label: "Type sluis", model: "Watersysteem",
-      type: "SluisType", eenheid: null,
-      values: [
-        { waarde: "Keersluis", count: null },
-        { waarde: "Uitwateringssluis/spuisluis", count: null },
-        { waarde: "Inlaatsluis", count: null },
-        { waarde: "Schutsluis naar één zijde", count: null },
-        { waarde: "Schutsluis naar twee zijden", count: null },
-        { waarde: "Keersluis naar twee zijden", count: null },
-        { waarde: "Damsluis", count: null },
-        { waarde: "Overig", count: null },
-      ]
-    },
-    {
-      name: "hoogteBinnenOnderkantBen", label: "Hoogte binnenonderkant benedenstrooms", model: "Watersysteem",
-      type: "Double", eenheid: "m NAP",
-      values: [
-        { waarde: "< -2.0 m NAP", count: null },
-        { waarde: "-2.0 – -1.0 m NAP", count: null },
-        { waarde: "-1.0 – 0.0 m NAP", count: null },
-        { waarde: "> 0.0 m NAP", count: null },
-      ]
-    },
-    {
-      name: "hoogteBinnenOnderkantBov", label: "Hoogte binnenonderkant bovenstrooms", model: "Watersysteem",
-      type: "Double", eenheid: "m NAP",
-      values: [
-        { waarde: "< -2.0 m NAP", count: null },
-        { waarde: "-2.0 – -1.0 m NAP", count: null },
-        { waarde: "-1.0 – 0.0 m NAP", count: null },
-        { waarde: "> 0.0 m NAP", count: null },
-      ]
-    },
-    {
-      name: "richting", label: "Richting (geografisch)", model: "Watersysteem",
-      type: "Single", eenheid: null,
-      values: [
-        { waarde: "Noord–Zuid", count: null },
-        { waarde: "Oost–West", count: null },
-        { waarde: "NW–ZO", count: null },
-        { waarde: "NO–ZW", count: null },
-      ]
-    },
-    // ── Keringen-attributen ──────────────────────────────────────────────
-    {
-      name: "typeWaterkerendeConstructie", label: "Type waterkerende constructie", model: "Keringen",
-      type: "WaterkerendeConstructieType", eenheid: null,
-      values: [
-        { waarde: "Type I – zelfstandig waterkerend", count: null },
-        { waarde: "Type II – waterkerend i.c.m. grondconstructie", count: null },
-        { waarde: "Type III – waterkerend bij falen andere constructie", count: null },
-        { waarde: "Type IV – tast bij falen waterkering aan", count: null },
-      ]
-    },
-    {
-      name: "indicatieWaterkerend", label: "Indicatie waterkerend", model: "Keringen",
-      type: "JaNee", eenheid: null,
-      values: [
-        { waarde: "Ja", count: null },
-        { waarde: "Nee", count: null },
-      ]
-    },
-    {
-      name: "categorieWaterkering", label: "Categorie waterkering", model: "Keringen",
-      type: "WaterkeringCategorie", eenheid: null,
-      values: [
-        { waarde: "Primair", count: null },
-        { waarde: "Regionaal", count: null },
-        { waarde: "Overig", count: null },
-      ]
-    },
-    {
-      name: "kerendeHoogte", label: "Kerende hoogte", model: "Keringen",
-      type: "Double", eenheid: "m NAP",
-      values: [
-        { waarde: "< -1.0 m NAP", count: null },
-        { waarde: "-1.0 – 0.0 m NAP", count: null },
-        { waarde: "0.0 – 1.0 m NAP", count: null },
-        { waarde: "> 1.0 m NAP", count: null },
-      ]
-    },
-    {
-      name: "signaleringspeil", label: "Signaleringspeil", model: "Keringen",
-      type: "Double", eenheid: "m NAP",
-      values: [
-        { waarde: "< 0.0 m NAP", count: null },
-        { waarde: "0.0 – 0.5 m NAP", count: null },
-        { waarde: "0.5 – 1.0 m NAP", count: null },
-        { waarde: "> 1.0 m NAP", count: null },
-      ]
-    },
-    {
-      name: "sluitpeil", label: "Sluitpeil", model: "Keringen",
-      type: "Double", eenheid: "m NAP",
-      values: [
-        { waarde: "< 0.0 m NAP", count: null },
-        { waarde: "0.0 – 0.5 m NAP", count: null },
-        { waarde: "> 0.5 m NAP", count: null },
-      ]
-    },
-    {
-      name: "openkeerpeil", label: "Openkeerpeil", model: "Keringen",
-      type: "Double", eenheid: "m NAP",
-      values: [
-        { waarde: "< 0.0 m NAP", count: null },
-        { waarde: "0.0 – 0.5 m NAP", count: null },
-        { waarde: "> 0.5 m NAP", count: null },
-      ]
-    },
-    {
-      name: "openingspeil", label: "Openingspeil", model: "Keringen",
-      type: "Double", eenheid: "m NAP",
-      values: [
-        { waarde: "< 0.0 m NAP", count: null },
-        { waarde: "0.0 – 0.5 m NAP", count: null },
-        { waarde: "> 0.5 m NAP", count: null },
-      ]
-    },
-    {
-      name: "drempelpeil", label: "Drempelpeil", model: "Keringen",
-      type: "Double", eenheid: "m NAP",
-      values: [
-        { waarde: "< -2.0 m NAP", count: null },
-        { waarde: "-2.0 – -1.0 m NAP", count: null },
-        { waarde: "-1.0 – 0.0 m NAP", count: null },
-        { waarde: "> 0.0 m NAP", count: null },
-      ]
-    },
-    {
-      name: "filterUitstroming", label: "Filter uitstroming aanwezig", model: "Keringen",
-      type: "JaNee", eenheid: null,
-      values: [
-        { waarde: "Ja", count: null },
-        { waarde: "Nee", count: null },
-      ]
-    },
-    {
-      name: "ontwerpBuitenWaterstand", label: "Ontwerp buitenwaterstand", model: "Keringen",
-      type: "Double", eenheid: "m NAP",
-      values: [
-        { waarde: "< 0.0 m NAP", count: null },
-        { waarde: "0.0 – 1.0 m NAP", count: null },
-        { waarde: "1.0 – 2.0 m NAP", count: null },
-        { waarde: "> 2.0 m NAP", count: null },
-      ]
-    },
-    {
-      name: "breedteOpening", label: "Breedte opening", model: "Keringen",
-      type: "Double", eenheid: "m",
-      values: [
-        { waarde: "< 2m", count: null },
-        { waarde: "2 – 5m", count: null },
-        { waarde: "5 – 10m", count: null },
-        { waarde: "> 10m", count: null },
-      ]
-    },
-    {
-      name: "drempelhoogte", label: "Drempelhoogte", model: "Keringen",
-      type: "Double", eenheid: "m NAP",
-      values: [
-        { waarde: "< -2.0 m NAP", count: null },
-        { waarde: "-2.0 – -1.0 m NAP", count: null },
-        { waarde: "-1.0 – 0.0 m NAP", count: null },
-        { waarde: "> 0.0 m NAP", count: null },
-      ]
-    },
-  ],
   // Bron: DAMO 2.6 Objectenhandboek VasteDam — Het Waterschapshuis (2025)
   vastedam: [
     // ── Watersysteem-attributen (alle attributen VasteDam zijn Watersysteem) ─
