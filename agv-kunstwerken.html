@@ -1,0 +1,2278 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AGV Kunstwerken Standaardisatie</title>
+  <!-- React & ReactDOM via CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel voor JSX transformatie in browser -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+
+// ─── Kleurpalet & stijl ───────────────────────────────────────────────────────
+const CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg: #0b1220;
+    --panel: #111c2e;
+    --panel2: #162035;
+    --border: #1e3a5f;
+    --accent: #00c8ff;
+    --accent2: #00ff9d;
+    --warn: #ffb347;
+    --danger: #ff4d6d;
+    --text: #d0e4f7;
+    --muted: #5a7a9a;
+    --bulk: #00ff9d;
+    --nobulk: #ff4d6d;
+    --grid: rgba(0,200,255,0.04);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* Header */
+  .header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px 24px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; letter-spacing: 3px;
+    color: var(--accent); text-transform: uppercase;
+    border: 1px solid var(--accent);
+    padding: 4px 10px;
+  }
+  .header-title {
+    font-size: 15px; font-weight: 600;
+    color: var(--text);
+  }
+  .header-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; color: var(--muted); letter-spacing: 1px;
+  }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent2);
+    box-shadow: 0 0 8px var(--accent2);
+    animation: pulse 2s infinite;
+    margin-left: auto;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; } 50% { opacity:0.4; }
+  }
+  .status-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; color: var(--accent2);
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex; gap: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    padding: 0 24px;
+  }
+  .tab {
+    padding: 12px 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    background: none; border-top: none; border-left: none; border-right: none;
+  }
+  .tab:hover { color: var(--accent); }
+  .tab.active {
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+  }
+
+  /* Layout */
+  .main { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+  /* Kaart tab */
+  .map-layout { display: grid; grid-template-columns: 280px 1fr; gap: 16px; }
+  .sidebar {
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 16px; display: flex; flex-direction: column; gap: 12px;
+  }
+  .sidebar-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; letter-spacing: 2px; color: var(--accent);
+    text-transform: uppercase; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .filter-group { display: flex; flex-direction: column; gap: 6px; }
+  .filter-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; color: var(--muted); letter-spacing: 1px;
+  }
+  .filter-select {
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); padding: 6px 10px;
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    width: 100%;
+  }
+  .filter-select:focus { outline: 1px solid var(--accent); }
+
+  .map-container {
+    background: var(--panel); border: 1px solid var(--border);
+    position: relative; overflow: hidden;
+    min-height: 520px;
+  }
+  .map-placeholder {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    height: 520px; gap: 12px;
+  }
+  .map-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,200,255,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,200,255,0.06) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .map-canvas { width: 100%; height: 520px; }
+
+  /* Object kaarten */
+  .object-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px; margin-top: 16px;
+  }
+  .object-card {
+    background: var(--panel2); border: 1px solid var(--border);
+    padding: 14px; cursor: pointer;
+    transition: all 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .object-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+  .object-card.bulk::before { background: var(--bulk); }
+  .object-card.nobulk::before { background: var(--nobulk); }
+  .object-card.mixed::before { background: var(--warn); }
+  .object-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .object-card-type {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px; letter-spacing: 2px;
+    color: var(--muted); text-transform: uppercase; margin-bottom: 6px;
+  }
+  .object-card-name { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+  .object-card-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 20px; font-weight: 500; color: var(--accent);
+  }
+  .object-card-label { font-size: 10px; color: var(--muted); }
+  .bulk-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; font-size: 10px;
+    font-family: 'DM Mono', monospace; letter-spacing: 1px;
+    margin-top: 8px;
+  }
+  .bulk-badge.bulk { color: var(--bulk); border: 1px solid var(--bulk); }
+  .bulk-badge.nobulk { color: var(--nobulk); border: 1px solid var(--nobulk); }
+  .bulk-badge.mixed { color: var(--warn); border: 1px solid var(--warn); }
+
+  /* Decompositie tab */
+  .decomp-layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; }
+  .tree-panel {
+    background: var(--panel); border: 1px solid var(--border); padding: 16px;
+  }
+  .tree-node {
+    padding: 6px 8px; cursor: pointer;
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    border-left: 2px solid transparent;
+    transition: all 0.15s; margin: 2px 0;
+  }
+  .tree-node:hover { border-left-color: var(--accent); color: var(--accent); }
+  .tree-node.selected { border-left-color: var(--accent); color: var(--accent); background: rgba(0,200,255,0.05); }
+  .tree-node.child { padding-left: 24px; font-size: 10px; color: var(--muted); }
+  .tree-node.child:hover, .tree-node.child.selected { color: var(--accent2); border-left-color: var(--accent2); }
+  .tree-node.grandchild { padding-left: 44px; font-size: 10px; color: var(--muted); }
+
+  .attr-panel {
+    background: var(--panel); border: 1px solid var(--border); padding: 20px;
+  }
+  .attr-header {
+    display: flex; align-items: baseline; gap: 12px; margin-bottom: 20px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+  .attr-title { font-size: 18px; font-weight: 700; }
+  .attr-sub {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--muted); letter-spacing: 1px;
+  }
+
+  .axis-section { margin-bottom: 24px; }
+  .axis-title {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    letter-spacing: 2px; color: var(--accent); text-transform: uppercase;
+    margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+  }
+  .axis-title::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  .attr-row {
+    display: grid; grid-template-columns: 180px 1fr 80px 100px;
+    gap: 8px; align-items: center;
+    padding: 8px 10px; margin-bottom: 4px;
+    background: var(--panel2); border: 1px solid var(--border);
+  }
+  .attr-row:hover { border-color: var(--border); }
+  .attr-name { font-size: 12px; font-weight: 500; }
+  .attr-values {
+    display: flex; flex-wrap: wrap; gap: 4px;
+  }
+  .attr-value {
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    padding: 2px 6px; border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .attr-value.dominant {
+    border-color: var(--accent); color: var(--accent);
+  }
+  .attr-count {
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    color: var(--muted); text-align: right;
+  }
+  .bulk-toggle {
+    display: flex; gap: 4px; justify-content: flex-end;
+  }
+  .btn-bulk {
+    padding: 3px 8px; font-size: 9px;
+    font-family: 'DM Mono', monospace; letter-spacing: 1px;
+    cursor: pointer; border: 1px solid; background: none;
+    transition: all 0.15s;
+  }
+  .btn-bulk.bulk { border-color: var(--bulk); color: var(--bulk); }
+  .btn-bulk.bulk.active { background: var(--bulk); color: var(--bg); }
+  .btn-bulk.nobulk { border-color: var(--nobulk); color: var(--nobulk); }
+  .btn-bulk.nobulk.active { background: var(--nobulk); color: var(--bg); }
+
+  /* Analyse tab */
+  .analyse-layout { display: flex; flex-direction: column; gap: 16px; }
+  .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .chart-panel {
+    background: var(--panel); border: 1px solid var(--border); padding: 20px;
+  }
+  .chart-title {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    letter-spacing: 2px; color: var(--accent); text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .chart-sub { font-size: 11px; color: var(--muted); margin-bottom: 16px; }
+
+  .bar-item { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .bar-label {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--text); width: 120px; flex-shrink: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .bar-track {
+    flex: 1; height: 20px; background: var(--panel2);
+    border: 1px solid var(--border); position: relative; overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%; transition: width 0.8s cubic-bezier(.4,0,.2,1);
+    position: relative;
+  }
+  .bar-fill::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.1) 100%);
+  }
+  .bar-value {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--muted); width: 36px; text-align: right;
+  }
+
+  /* Scatter / matrix */
+  .matrix {
+    display: grid; gap: 4px;
+  }
+  .matrix-cell {
+    padding: 8px; text-align: center;
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    border: 1px solid var(--border); cursor: pointer;
+    transition: all 0.2s;
+  }
+  .matrix-cell:hover { border-color: var(--accent); }
+  .matrix-header { color: var(--muted); background: var(--panel2); }
+  .matrix-count { font-size: 16px; font-weight: 700; }
+
+  /* Detail panel */
+  .detail-panel {
+    background: var(--panel2); border: 1px solid var(--accent);
+    padding: 16px; margin-top: 16px;
+    animation: slideIn 0.2s ease;
+  }
+  @keyframes slideIn {
+    from { opacity:0; transform: translateY(8px); }
+    to { opacity:1; transform: translateY(0); }
+  }
+  .detail-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-top: 12px; }
+  .detail-item { display: flex; flex-direction: column; gap: 4px; }
+  .detail-key {
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    color: var(--muted); letter-spacing: 1px; text-transform: uppercase;
+  }
+  .detail-val { font-size: 12px; font-weight: 500; }
+
+  /* Loading */
+  .loading {
+    display: flex; align-items: center; gap: 8px;
+    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent);
+  }
+  .spinner {
+    width: 14px; height: 14px; border: 2px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Stat rij bovenaan */
+  .stat-row {
+    display: grid; grid-template-columns: repeat(4,1fr); gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 16px; position: relative; overflow: hidden;
+  }
+  .stat-card::after {
+    content: ''; position: absolute; top: 0; right: 0;
+    width: 60px; height: 60px;
+    background: radial-gradient(circle, rgba(0,200,255,0.08) 0%, transparent 70%);
+  }
+  .stat-num {
+    font-family: 'DM Mono', monospace; font-size: 28px;
+    font-weight: 500; color: var(--accent); line-height: 1;
+  }
+  .stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* Tags */
+  .tag {
+    display: inline-block; padding: 2px 8px;
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    letter-spacing: 1px; text-transform: uppercase;
+    border: 1px solid var(--border); color: var(--muted);
+    margin: 2px;
+  }
+  .tag.context { border-color: var(--warn); color: var(--warn); }
+  .tag.rams { border-color: var(--accent2); color: var(--accent2); }
+  .tag.func { border-color: var(--accent); color: var(--accent); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
+
+  /* SVG kaart stijl */
+  .map-svg { width: 100%; height: 520px; }
+  .map-point { cursor: pointer; transition: r 0.2s; }
+  .map-point:hover { r: 7; }
+  .map-tooltip {
+    position: absolute; background: var(--panel);
+    border: 1px solid var(--accent); padding: 10px 14px;
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    pointer-events: none; z-index: 10;
+    min-width: 180px;
+  }
+  .map-tooltip-title { color: var(--accent); font-size: 12px; margin-bottom: 6px; }
+  .map-tooltip-row { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); }
+  .map-tooltip-val { color: var(--text); }
+`;
+
+// ─── Demo data (realistisch voor AGV-gebied) ─────────────────────────────────
+const OBJECTTYPEN = [
+  { id: "stuw", label: "Stuw", count: 847, bulk: true },
+  { id: "gemaal", label: "Gemaal", count: 124, bulk: false },
+  { id: "duiker", label: "Duiker", count: 3241, bulk: true },
+  { id: "brug", label: "Brug", count: 412, bulk: true },
+  { id: "sluis", label: "Sluis", count: 38, bulk: false },
+  { id: "afsluitmiddel", label: "Afsluitmiddel", count: 1893, bulk: true },
+  { id: "vispassage", label: "Vispassage", count: 23, bulk: false },
+  { id: "hevel", label: "Hevel", count: 67, bulk: false },
+];
+
+const KAART_OBJECTEN = [
+  { id: 1, type: "stuw", name: "Stuw Amstelveenseweg", x: 245, y: 180, context: "woongebied", rams: "kritisch", bulk: true },
+  { id: 2, type: "stuw", name: "Stuw Bovenkerkerpolder", x: 310, y: 240, context: "boerenland", rams: "normaal", bulk: true },
+  { id: 3, type: "gemaal", name: "Gemaal De Oude Tocht", x: 180, y: 310, context: "afgelegen", rams: "kritisch", bulk: false },
+  { id: 4, type: "duiker", name: "Duiker N522", x: 420, y: 195, context: "boerenland", rams: "normaal", bulk: true },
+  { id: 5, type: "duiker", name: "Duiker Ronde Hoep", x: 380, y: 290, context: "broedgebied", rams: "laag", bulk: true },
+  { id: 6, type: "sluis", name: "Sluis Ouderkerk", x: 290, y: 140, context: "woongebied", rams: "kritisch", bulk: false },
+  { id: 7, type: "brug", name: "Brug Amsteldijk", x: 220, y: 220, context: "voetgangersgebied", rams: "normaal", bulk: true },
+  { id: 8, type: "stuw", name: "Stuw Waver", x: 460, y: 320, context: "boerenland", rams: "normaal", bulk: true },
+  { id: 9, type: "vispassage", name: "Vispassage Amstel", x: 270, y: 175, context: "broedgebied", rams: "laag", bulk: false },
+  { id: 10, type: "duiker", name: "Duiker Groot Mijdrecht", x: 150, y: 380, context: "boerenland", rams: "laag", bulk: true },
+  { id: 11, type: "afsluitmiddel", name: "Schuif Ringvaart", x: 340, y: 160, context: "woongebied", rams: "normaal", bulk: true },
+  { id: 12, type: "gemaal", name: "Gemaal Legmeer", x: 410, y: 390, context: "afgelegen", rams: "kritisch", bulk: false },
+  { id: 13, type: "brug", name: "Brug Schiphol N", x: 130, y: 200, context: "afgelegen", rams: "normaal", bulk: true },
+  { id: 14, type: "stuw", name: "Stuw Uithoorn", x: 350, y: 360, context: "woongebied", rams: "normaal", bulk: true },
+  { id: 15, type: "afsluitmiddel", name: "Klep Duivendrechtse Polder", x: 260, y: 260, context: "boerenland", rams: "laag", bulk: true },
+];
+
+// DAMO attributen per objecttype — alleen functionele as (uit DAMO objectenhandboek)
+// counts zijn —  tenzij known demo data
+// Bron: DAMO 2.6 Objectenhandboek — Het Waterschapshuis (2025)
+// Stuw-attributen conform DAMO 2.6 Stuw-pagina + domeinpagina's A-M en N-Z
+const DAMO_ATTRIBUTEN = {
+  stuw: [
+    // ── Watersysteem-attributen ──────────────────────────────────────────
+    {
+      name: "typeStuw", label: "Type stuw", model: "Watersysteem",
+      type: "StuwType", eenheid: null,
+      values: [
+        { waarde: "Schotbalkstuw", count: null },
+        { waarde: "Schuifstuw", count: null },
+        { waarde: "Klepstuw", count: null },
+        { waarde: "Hevelstuw", count: null },
+        { waarde: "Balansstuw", count: null },
+        { waarde: "Drijverstuw", count: null },
+        { waarde: "Gecombineerde stuw", count: null },
+        { waarde: "Vaste stuw", count: null },
+        { waarde: "Gronddamstuw", count: null },
+        { waarde: "Kantelstuw", count: null },
+        { waarde: "Balgstuw", count: null },
+        { waarde: "Brievenbusstuw", count: null },
+        { waarde: "Keienstuw", count: null },
+        { waarde: "Boomstamstuw", count: null },
+        { waarde: "Buisbochtstuw", count: null },
+        { waarde: "Beverstuw", count: null },
+        { waarde: "Overig", count: null },
+        { waarde: "Onbekend", count: null },
+      ]
+    },
+    {
+      name: "hoofdfunctieStuw", label: "Hoofdfunctie stuw", model: "Watersysteem",
+      type: "StuwHoofdfunctie", eenheid: null,
+      values: [
+        { waarde: "Stuwen", count: null },
+        { waarde: "Inlaten", count: null },
+        { waarde: "Aflaten", count: null },
+        { waarde: "In- en aflaten", count: null },
+        { waarde: "Overlaten", count: null },
+        { waarde: "Verdelen", count: null },
+        { waarde: "Conserveren", count: null },
+        { waarde: "Bergen", count: null },
+        { waarde: "Knijpen", count: null },
+        { waarde: "Stabiliseren", count: null },
+        { waarde: "Doorwaden", count: null },
+        { waarde: "Geen", count: null },
+      ]
+    },
+    {
+      name: "nevenfunctieStuw", label: "Nevenfunctie stuw", model: "Watersysteem",
+      type: "StuwNevenfunctie", eenheid: null,
+      values: [
+        { waarde: "Meten", count: null },
+        { waarde: "Recreëren", count: null },
+        { waarde: "Ecologie ondersteunen", count: null },
+        { waarde: "Calamiteit bestrijden", count: null },
+        { waarde: "Zuiveren", count: null },
+        { waarde: "Vispasseerbaarheid ondersteunen", count: null },
+        { waarde: "Onderhouden", count: null },
+        { waarde: "Zoet-zout scheiden", count: null },
+        { waarde: "Geen", count: null },
+      ]
+    },
+    {
+      name: "typeRegelbaarheid", label: "Type regelbaarheid", model: "Watersysteem",
+      type: "RegelbaarheidType", eenheid: null,
+      values: [
+        { waarde: "Niet regelbaar (vast)", count: null },
+        { waarde: "Regelbaar – lokaal automatisch elektronisch", count: null },
+        { waarde: "Regelbaar – lokaal automatisch mechanisch", count: null },
+        { waarde: "Regelbaar – lokaal handmatig elektronisch", count: null },
+        { waarde: "Regelbaar – lokaal handmatig mechanisch", count: null },
+        { waarde: "Regelbaar – op afstand automatisch", count: null },
+        { waarde: "Overig", count: null },
+        { waarde: "Onbekend", count: null },
+      ]
+    },
+    {
+      name: "typeMateriaal", label: "Type materiaal hoofdconstructie", model: "Watersysteem",
+      type: "KunstwerkTypeMateriaal", eenheid: null,
+      values: [
+        { waarde: "Beton", count: null },
+        { waarde: "Gewapend beton", count: null },
+        { waarde: "Voorgespannen beton", count: null },
+        { waarde: "Staal", count: null },
+        { waarde: "Roestvrij staal", count: null },
+        { waarde: "Gietijzer", count: null },
+        { waarde: "Hout", count: null },
+        { waarde: "Kunststof", count: null },
+        { waarde: "PVC", count: null },
+        { waarde: "Metselwerk", count: null },
+        { waarde: "Overig", count: null },
+        { waarde: "Onbekend", count: null },
+      ]
+    },
+    {
+      name: "kruinbreedte", label: "Kruinbreedte", model: "Watersysteem",
+      type: "Double", eenheid: "m",
+      values: [
+        { waarde: "< 0.5m", count: null },
+        { waarde: "0.5 – 1m", count: null },
+        { waarde: "1 – 2m", count: null },
+        { waarde: "2 – 5m", count: null },
+        { waarde: "> 5m", count: null },
+      ]
+    },
+    {
+      name: "hoogteConstructie", label: "Hoogte constructie", model: "Watersysteem",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -1.0 m NAP", count: null },
+        { waarde: "-1.0 – -0.5 m NAP", count: null },
+        { waarde: "-0.5 – 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "> 0.5 m NAP", count: null },
+      ]
+    },
+    {
+      name: "richting", label: "Richting (geografisch)", model: "Watersysteem",
+      type: "Single", eenheid: null,
+      values: [
+        { waarde: "Noord–Zuid", count: null },
+        { waarde: "Oost–West", count: null },
+        { waarde: "NW–ZO", count: null },
+        { waarde: "NO–ZW", count: null },
+      ]
+    },
+    // ── Keringen-attributen ──────────────────────────────────────────────
+    {
+      name: "typeWaterkerendeConstructie", label: "Type waterkerende constructie", model: "Keringen",
+      type: "WaterkerendeConstructieType", eenheid: null,
+      values: [
+        { waarde: "Type I – zelfstandig waterkerend", count: null },
+        { waarde: "Type II – waterkerend i.c.m. grondconstructie", count: null },
+        { waarde: "Type III – waterkerend bij falen andere constructie", count: null },
+        { waarde: "Type IV – tast bij falen waterkering aan", count: null },
+      ]
+    },
+    {
+      name: "indicatieWaterkerend", label: "Indicatie waterkerend", model: "Keringen",
+      type: "JaNee", eenheid: null,
+      values: [
+        { waarde: "Ja", count: null },
+        { waarde: "Nee", count: null },
+      ]
+    },
+    {
+      name: "categorieWaterkering", label: "Categorie waterkering", model: "Keringen",
+      type: "WaterkeringCategorie", eenheid: null,
+      values: [
+        { waarde: "Primair", count: null },
+        { waarde: "Regionaal", count: null },
+        { waarde: "Overig", count: null },
+      ]
+    },
+    {
+      name: "kerendeHoogte", label: "Kerende hoogte", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null },
+        { waarde: "0.0 – 1.0 m NAP", count: null },
+        { waarde: "> 1.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "drempelpeil", label: "Drempelpeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -0.60 m NAP", count: null },
+        { waarde: "-0.60 – -0.40 m NAP", count: null },
+        { waarde: "-0.40 – -0.20 m NAP", count: null },
+        { waarde: "-0.20 – 0.00 m NAP", count: null },
+        { waarde: "> 0.00 m NAP", count: null },
+      ]
+    },
+    {
+      name: "signaleringspeil", label: "Signaleringspeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "0.5 – 1.0 m NAP", count: null },
+        { waarde: "> 1.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "sluitpeil", label: "Sluitpeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "0.5 – 1.0 m NAP", count: null },
+        { waarde: "> 1.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "filterUitstroming", label: "Filter uitstroming aanwezig", model: "Keringen",
+      type: "JaNee", eenheid: null,
+      values: [
+        { waarde: "Ja", count: null },
+        { waarde: "Nee", count: null },
+      ]
+    },
+    {
+      name: "openkeerpeil", label: "Openkeerpeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "> 0.5 m NAP", count: null },
+      ]
+    },
+    {
+      name: "openingspeil", label: "Openingspeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "> 0.5 m NAP", count: null },
+      ]
+    },
+    {
+      name: "ontwerpBuitenWaterstand", label: "Ontwerp buitenwaterstand", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 1.0 m NAP", count: null },
+        { waarde: "1.0 – 2.0 m NAP", count: null },
+        { waarde: "> 2.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "aantalKunstwerkopeningen", label: "Aantal kunstwerkopeningen", model: "Keringen",
+      type: "Integer", eenheid: null,
+      values: [
+        { waarde: "1", count: null },
+        { waarde: "2", count: null },
+        { waarde: "3", count: null },
+        { waarde: "> 3", count: null },
+      ]
+    },
+  ],
+  // Bron: DAMO 2.6 Objectenhandboek Gemaal — Het Waterschapshuis (2025)
+  gemaal: [
+    // ── Watersysteem-attributen ──────────────────────────────────────────
+    {
+      name: "richting", label: "Richting (geografisch)", model: "Watersysteem",
+      type: "Single", eenheid: null,
+      values: [
+        { waarde: "Noord–Zuid", count: null },
+        { waarde: "Oost–West", count: null },
+        { waarde: "NW–ZO", count: null },
+        { waarde: "NO–ZW", count: null },
+      ]
+    },
+    {
+      name: "maximaleCapaciteit", label: "Maximale capaciteit", model: "Watersysteem",
+      type: "Double", eenheid: "m³/min",
+      values: [
+        { waarde: "< 10 m³/min", count: null },
+        { waarde: "10 – 50 m³/min", count: null },
+        { waarde: "50 – 200 m³/min", count: null },
+        { waarde: "200 – 500 m³/min", count: null },
+        { waarde: "> 500 m³/min", count: null },
+      ]
+    },
+    {
+      name: "typeRegelbaarheid", label: "Type regelbaarheid", model: "Watersysteem",
+      type: "RegelbaarheidType", eenheid: null,
+      values: [
+        { waarde: "Niet regelbaar (vast)", count: null },
+        { waarde: "Regelbaar – lokaal automatisch elektronisch", count: null },
+        { waarde: "Regelbaar – lokaal automatisch mechanisch", count: null },
+        { waarde: "Regelbaar – lokaal handmatig elektronisch", count: null },
+        { waarde: "Regelbaar – lokaal handmatig mechanisch", count: null },
+        { waarde: "Regelbaar – op afstand automatisch", count: null },
+        { waarde: "Overig", count: null },
+        { waarde: "Onbekend", count: null },
+      ]
+    },
+    {
+      name: "afslagpeil", label: "Afslagpeil", model: "Watersysteem",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -2.0 m NAP", count: null },
+        { waarde: "-2.0 – -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null },
+        { waarde: "> 0.0 m NAP", count: null },
+      ]
+    },
+    // ── Watersysteem én Keringen ─────────────────────────────────────────
+    {
+      name: "functieGebiedGemaal", label: "Functie gebied gemaal", model: "Watersysteem/Keringen",
+      type: "GemaalFunctieGebied", eenheid: null,
+      values: [
+        { waarde: "Bebouwing", count: null },
+        { waarde: "Landbouw", count: null },
+        { waarde: "Polder", count: null },
+        { waarde: "Natuurlijk", count: null },
+        { waarde: "Overig", count: null },
+        { waarde: "Onbekend", count: null },
+      ]
+    },
+    // ── Keringen-attributen ──────────────────────────────────────────────
+    {
+      name: "indicatieWaterkerend", label: "Indicatie waterkerend", model: "Keringen",
+      type: "JaNee", eenheid: null,
+      values: [
+        { waarde: "Ja", count: null },
+        { waarde: "Nee", count: null },
+      ]
+    },
+    {
+      name: "typeWaterkerendeConstructie", label: "Type waterkerende constructie", model: "Keringen",
+      type: "WaterkerendeConstructieType", eenheid: null,
+      values: [
+        { waarde: "Type I – zelfstandig waterkerend", count: null },
+        { waarde: "Type II – waterkerend i.c.m. grondconstructie", count: null },
+        { waarde: "Type III – waterkerend bij falen andere constructie", count: null },
+        { waarde: "Type IV – tast bij falen waterkering aan", count: null },
+      ]
+    },
+    {
+      name: "drempelpeil", label: "Drempelpeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -2.0 m NAP", count: null },
+        { waarde: "-2.0 – -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null },
+        { waarde: "> 0.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "functieGemaal", label: "Functie gemaal", model: "Keringen",
+      type: "GemaalFunctie", eenheid: null,
+      values: [
+        { waarde: "Aanvoeren", count: null },
+        { waarde: "Afvoeren", count: null },
+        { waarde: "Onderbemalen", count: null },
+        { waarde: "Af- en aanvoeren", count: null },
+        { waarde: "Noodbemalen", count: null },
+        { waarde: "Doorspoelen", count: null },
+        { waarde: "Onbekend", count: null },
+      ]
+    },
+    {
+      name: "kerendeHoogte", label: "Kerende hoogte", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null },
+        { waarde: "0.0 – 1.0 m NAP", count: null },
+        { waarde: "> 1.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "signaleringspeil", label: "Signaleringspeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "0.5 – 1.0 m NAP", count: null },
+        { waarde: "> 1.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "sluitpeil", label: "Sluitpeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "0.5 – 1.0 m NAP", count: null },
+        { waarde: "> 1.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "openkeerpeil", label: "Openkeerpeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "> 0.5 m NAP", count: null },
+      ]
+    },
+    {
+      name: "categorieWaterkering", label: "Categorie waterkering", model: "Keringen",
+      type: "WaterkeringCategorie", eenheid: null,
+      values: [
+        { waarde: "Primair", count: null },
+        { waarde: "Regionaal", count: null },
+        { waarde: "Overig", count: null },
+      ]
+    },
+    {
+      name: "openingspeil", label: "Openingspeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "> 0.5 m NAP", count: null },
+      ]
+    },
+    {
+      name: "filterUitstroming", label: "Filter uitstroming aanwezig", model: "Keringen",
+      type: "JaNee", eenheid: null,
+      values: [
+        { waarde: "Ja", count: null },
+        { waarde: "Nee", count: null },
+      ]
+    },
+    {
+      name: "ontwerpBuitenWaterstand", label: "Ontwerp buitenwaterstand", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 1.0 m NAP", count: null },
+        { waarde: "1.0 – 2.0 m NAP", count: null },
+        { waarde: "> 2.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "breedteOpening", label: "Breedte opening", model: "Keringen",
+      type: "Double", eenheid: "m",
+      values: [
+        { waarde: "< 0.5m", count: null },
+        { waarde: "0.5 – 1m", count: null },
+        { waarde: "1 – 2m", count: null },
+        { waarde: "> 2m", count: null },
+      ]
+    },
+    {
+      name: "aantalOpeningen", label: "Aantal openingen", model: "Keringen",
+      type: "Integer", eenheid: null,
+      values: [
+        { waarde: "1", count: null },
+        { waarde: "2", count: null },
+        { waarde: "3", count: null },
+        { waarde: "> 3", count: null },
+      ]
+    },
+  ],
+  // Bron: DAMO 2.6 Objectenhandboek Brug — Het Waterschapshuis (2025)
+  brug: [
+    // ── Watersysteem-attributen (alle attributen Brug zijn Watersysteem) ─
+    {
+      name: "typeOverspanning", label: "Type overspanning", model: "Watersysteem",
+      type: "BrugType", eenheid: null,
+      values: [
+        { waarde: "Vrije overspanning", count: null },
+        { waarde: "Overspanning via tussenpunten", count: null },
+        { waarde: "Overspanning via landhoofden binnen doorstroomprofiel", count: null },
+        { waarde: "Overspanning via landhoofden en tussenpunten", count: null },
+        { waarde: "Overig", count: null },
+        { waarde: "Onbekend", count: null },
+      ]
+    },
+    {
+      name: "hoogteOnderzijde", label: "Hoogte onderzijde brugdek", model: "Watersysteem",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -0.5 m NAP", count: null },
+        { waarde: "-0.5 – 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "0.5 – 1.0 m NAP", count: null },
+        { waarde: "> 1.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "doorvaartBreedte", label: "Doorvaartbreedte", model: "Watersysteem",
+      type: "Double", eenheid: "m",
+      values: [
+        { waarde: "< 2m", count: null },
+        { waarde: "2 – 4m", count: null },
+        { waarde: "4 – 8m", count: null },
+        { waarde: "8 – 15m", count: null },
+        { waarde: "> 15m", count: null },
+      ]
+    },
+    {
+      name: "richting", label: "Richting (geografisch)", model: "Watersysteem",
+      type: "Single", eenheid: null,
+      values: [
+        { waarde: "Noord–Zuid", count: null },
+        { waarde: "Oost–West", count: null },
+        { waarde: "NW–ZO", count: null },
+        { waarde: "NO–ZW", count: null },
+      ]
+    },
+    {
+      name: "hoogteConstructie", label: "Hoogte constructie", model: "Watersysteem",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 1.0 m NAP", count: null },
+        { waarde: "1.0 – 2.0 m NAP", count: null },
+        { waarde: "> 2.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "typeKruising", label: "Type kruising", model: "Watersysteem",
+      type: "KruisingType", eenheid: null,
+      values: [
+        { waarde: "Aquaduct", count: null },
+        { waarde: "Brug", count: null },
+        { waarde: "Duiker", count: null },
+        { waarde: "Sifon", count: null },
+        { waarde: "Hevel", count: null },
+        { waarde: "Bypass", count: null },
+      ]
+    },
+    {
+      name: "typeMateriaal", label: "Type materiaal hoofdconstructie", model: "Watersysteem",
+      type: "KunstwerkTypeMateriaal", eenheid: null,
+      values: [
+        { waarde: "Beton", count: null },
+        { waarde: "Gewapend beton", count: null },
+        { waarde: "Voorgespannen beton", count: null },
+        { waarde: "Staal", count: null },
+        { waarde: "Roestvrij staal", count: null },
+        { waarde: "Hout", count: null },
+        { waarde: "Metselwerk", count: null },
+        { waarde: "Kunststof", count: null },
+        { waarde: "Overig", count: null },
+        { waarde: "Onbekend", count: null },
+      ]
+    },
+    {
+      name: "hoogteBovenzijde", label: "Hoogte bovenzijde (overloopniveau)", model: "Watersysteem",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.5 m NAP", count: null },
+        { waarde: "0.5 – 1.0 m NAP", count: null },
+        { waarde: "1.0 – 2.0 m NAP", count: null },
+        { waarde: "> 2.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "lengte", label: "Lengte (langs waterloop-as)", model: "Watersysteem",
+      type: "Double", eenheid: "m",
+      values: [
+        { waarde: "< 5m", count: null },
+        { waarde: "5 – 10m", count: null },
+        { waarde: "10 – 20m", count: null },
+        { waarde: "> 20m", count: null },
+      ]
+    },
+    {
+      name: "intreeverlies", label: "Intreeverlies", model: "Watersysteem",
+      type: "Double", eenheid: null,
+      values: [
+        { waarde: "< 0.2", count: null },
+        { waarde: "0.2 – 0.5", count: null },
+        { waarde: "0.5 – 1.0", count: null },
+        { waarde: "> 1.0", count: null },
+      ]
+    },
+    {
+      name: "uittreeverlies", label: "Uittreeverlies", model: "Watersysteem",
+      type: "Double", eenheid: null,
+      values: [
+        { waarde: "< 0.2", count: null },
+        { waarde: "0.2 – 0.5", count: null },
+        { waarde: "0.5 – 1.0", count: null },
+        { waarde: "> 1.0", count: null },
+      ]
+    },
+    {
+      name: "typeMethodeRuwheid", label: "Type methode ruwheid", model: "Watersysteem",
+      type: "RuwheidTypeMethode", eenheid: null,
+      values: [
+        { waarde: "Chezy", count: null },
+        { waarde: "Manning", count: null },
+        { waarde: "StricklerKn", count: null },
+        { waarde: "StricklerKs", count: null },
+        { waarde: "White Colebrook", count: null },
+        { waarde: "Bos en Bijkerk", count: null },
+        { waarde: "Overig", count: null },
+        { waarde: "Onbekend", count: null },
+      ]
+    },
+    {
+      name: "ruwheid", label: "Ruwheid", model: "Watersysteem",
+      type: "Double", eenheid: null,
+      values: [
+        { waarde: "< 20", count: null },
+        { waarde: "20 – 40", count: null },
+        { waarde: "40 – 60", count: null },
+        { waarde: "> 60", count: null },
+      ]
+    },
+    {
+      name: "bodemhoogteOnderBrug", label: "Bodemhoogte onder brug", model: "Watersysteem",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -2.0 m NAP", count: null },
+        { waarde: "-2.0 – -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null },
+        { waarde: "> 0.0 m NAP", count: null },
+      ]
+    },
+  ],
+  // Bron: DAMO 2.6 Objectenhandboek DuikerSifonHevel — Het Waterschapshuis (2025)
+  duiker: [
+    // ── Watersysteem-attributen ──────────────────────────────────────────
+    {
+      name: "indPeilRegulPeilScheidend", label: "Indicatie peilregulerend/peilscheidend", model: "Watersysteem",
+      type: "JaNeeOnbekend", eenheid: null,
+      values: [
+        { waarde: "Ja", count: null },
+        { waarde: "Nee", count: null },
+        { waarde: "Onbekend", count: null },
+      ]
+    },
+    {
+      name: "lengte", label: "Lengte (as hydroobject)", model: "Watersysteem",
+      type: "Double", eenheid: "m",
+      values: [
+        { waarde: "< 5m", count: null },
+        { waarde: "5 – 10m", count: null },
+        { waarde: "10 – 20m", count: null },
+        { waarde: "> 20m", count: null },
+      ]
+    },
+    {
+      name: "hoogteOpening", label: "Hoogte opening (inwendig)", model: "Watersysteem",
+      type: "Double", eenheid: "m",
+      values: [
+        { waarde: "< 0.3m", count: null },
+        { waarde: "0.3 – 0.5m", count: null },
+        { waarde: "0.5 – 1.0m", count: null },
+        { waarde: "1.0 – 1.5m", count: null },
+        { waarde: "> 1.5m", count: null },
+      ]
+    },
+    {
+      name: "breedteOpening", label: "Breedte opening (inwendig)", model: "Watersysteem",
+      type: "Double", eenheid: "m",
+      values: [
+        { waarde: "< 0.3m", count: null },
+        { waarde: "0.3 – 0.5m", count: null },
+        { waarde: "0.5 – 1.0m", count: null },
+        { waarde: "1.0 – 1.5m", count: null },
+        { waarde: "> 1.5m", count: null },
+      ]
+    },
+    {
+      name: "hoogteBinnenOnderkantBene", label: "Hoogte binnenonderkant benedenstrooms", model: "Watersysteem",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -2.0 m NAP", count: null },
+        { waarde: "-2.0 – -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null },
+        { waarde: "> 0.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "hoogteBinnenOnderkantBov", label: "Hoogte binnenonderkant bovenstrooms", model: "Watersysteem",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -2.0 m NAP", count: null },
+        { waarde: "-2.0 – -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null },
+        { waarde: "> 0.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "vormDuikerSifonHevel", label: "Vorm koker", model: "Watersysteem",
+      type: "Vormen", eenheid: null,
+      values: [
+        { waarde: "Rond", count: null },
+        { waarde: "Rechthoekig", count: null },
+        { waarde: "Eivormig", count: null },
+        { waarde: "Ellipsvormig", count: null },
+        { waarde: "Heulprofiel", count: null },
+        { waarde: "Muilprofiel", count: null },
+        { waarde: "Trapeziumvormig", count: null },
+        { waarde: "Onbekend", count: null },
+      ]
+    },
+    {
+      name: "typeMateriaal", label: "Type materiaal", model: "Watersysteem",
+      type: "KunstwerkTypeMateriaal", eenheid: null,
+      values: [
+        { waarde: "Beton", count: null },
+        { waarde: "Gewapend beton", count: null },
+        { waarde: "PVC", count: null },
+        { waarde: "Staal", count: null },
+        { waarde: "Gietijzer", count: null },
+        { waarde: "Hout", count: null },
+        { waarde: "Kunststof", count: null },
+        { waarde: "Overig", count: null },
+        { waarde: "Onbekend", count: null },
+      ]
+    },
+    {
+      name: "typeKruising", label: "Type kruising", model: "Watersysteem",
+      type: "KruisingType", eenheid: null,
+      values: [
+        { waarde: "Aquaduct", count: null },
+        { waarde: "Brug", count: null },
+        { waarde: "Duiker", count: null },
+        { waarde: "Sifon", count: null },
+        { waarde: "Hevel", count: null },
+        { waarde: "Bypass", count: null },
+      ]
+    },
+    {
+      name: "typeMethodeRuwheid", label: "Type methode ruwheid", model: "Watersysteem",
+      type: "RuwheidTypeMethode", eenheid: null,
+      values: [
+        { waarde: "Chezy", count: null },
+        { waarde: "Manning", count: null },
+        { waarde: "StricklerKn", count: null },
+        { waarde: "StricklerKs", count: null },
+        { waarde: "White Colebrook", count: null },
+        { waarde: "Bos en Bijkerk", count: null },
+        { waarde: "Overig", count: null },
+        { waarde: "Onbekend", count: null },
+      ]
+    },
+    {
+      name: "ruwheid", label: "Ruwheid", model: "Watersysteem",
+      type: "Double", eenheid: null,
+      values: [
+        { waarde: "< 20", count: null },
+        { waarde: "20 – 40", count: null },
+        { waarde: "40 – 60", count: null },
+        { waarde: "> 60", count: null },
+      ]
+    },
+    {
+      name: "intreeverlies", label: "Intreeverlies", model: "Watersysteem",
+      type: "Double", eenheid: null,
+      values: [
+        { waarde: "< 0.2", count: null },
+        { waarde: "0.2 – 0.5", count: null },
+        { waarde: "0.5 – 1.0", count: null },
+        { waarde: "> 1.0", count: null },
+      ]
+    },
+    {
+      name: "uittreeverlies", label: "Uittreeverlies", model: "Watersysteem",
+      type: "Double", eenheid: null,
+      values: [
+        { waarde: "< 0.2", count: null },
+        { waarde: "0.2 – 0.5", count: null },
+        { waarde: "0.5 – 1.0", count: null },
+        { waarde: "> 1.0", count: null },
+      ]
+    },
+    {
+      name: "bochtEnKnikverlies", label: "Bocht- en knikverlies (aantal knikken)", model: "Watersysteem",
+      type: "Double", eenheid: null,
+      values: [
+        { waarde: "0", count: null },
+        { waarde: "1", count: null },
+        { waarde: "2", count: null },
+        { waarde: "> 2", count: null },
+      ]
+    },
+    // ── Keringen-attributen ──────────────────────────────────────────────
+    {
+      name: "indicatieWaterkerend", label: "Indicatie waterkerend", model: "Keringen",
+      type: "JaNee", eenheid: null,
+      values: [
+        { waarde: "Ja", count: null },
+        { waarde: "Nee", count: null },
+      ]
+    },
+    {
+      name: "kerendeHoogte", label: "Kerende hoogte", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null },
+        { waarde: "0.0 – 1.0 m NAP", count: null },
+        { waarde: "> 1.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "typeWaterkerendeConstructie", label: "Type waterkerende constructie", model: "Keringen",
+      type: "WaterkerendeConstructieType", eenheid: null,
+      values: [
+        { waarde: "Type I – zelfstandig waterkerend", count: null },
+        { waarde: "Type II – waterkerend i.c.m. grondconstructie", count: null },
+        { waarde: "Type III – waterkerend bij falen andere constructie", count: null },
+        { waarde: "Type IV – tast bij falen waterkering aan", count: null },
+      ]
+    },
+    {
+      name: "categorieWaterkering", label: "Categorie waterkering", model: "Keringen",
+      type: "WaterkeringCategorie", eenheid: null,
+      values: [
+        { waarde: "Primair", count: null },
+        { waarde: "Regionaal", count: null },
+        { waarde: "Overig", count: null },
+      ]
+    },
+    {
+      name: "drempelpeil", label: "Drempelpeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -2.0 m NAP", count: null },
+        { waarde: "-2.0 – -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null },
+        { waarde: "> 0.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "signaleringspeil", label: "Signaleringspeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "> 0.5 m NAP", count: null },
+      ]
+    },
+    {
+      name: "sluitpeil", label: "Sluitpeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "> 0.5 m NAP", count: null },
+      ]
+    },
+    {
+      name: "openkeerpeil", label: "Openkeerpeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "> 0.5 m NAP", count: null },
+      ]
+    },
+    {
+      name: "openingspeil", label: "Openingspeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "> 0.5 m NAP", count: null },
+      ]
+    },
+    {
+      name: "ontwerpBuitenWaterstand", label: "Ontwerp buitenwaterstand", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 1.0 m NAP", count: null },
+        { waarde: "> 1.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "aantalOpeningen", label: "Aantal openingen", model: "Keringen",
+      type: "Integer", eenheid: null,
+      values: [
+        { waarde: "1", count: null },
+        { waarde: "2", count: null },
+        { waarde: "3", count: null },
+        { waarde: "> 3", count: null },
+      ]
+    },
+  ],
+  // Bron: DAMO 2.6 Objectenhandboek Sluis — Het Waterschapshuis (2025)
+  sluis: [
+    // ── Watersysteem-attributen ──────────────────────────────────────────
+    {
+      name: "doorvaartbreedte", label: "Doorvaartbreedte", model: "Watersysteem",
+      type: "Double", eenheid: "m",
+      values: [
+        { waarde: "< 5m", count: null },
+        { waarde: "5 – 10m", count: null },
+        { waarde: "10 – 20m", count: null },
+        { waarde: "> 20m", count: null },
+      ]
+    },
+    {
+      name: "breedte", label: "Breedte (loodrecht op as)", model: "Watersysteem",
+      type: "Double", eenheid: "m",
+      values: [
+        { waarde: "< 5m", count: null },
+        { waarde: "5 – 10m", count: null },
+        { waarde: "10 – 20m", count: null },
+        { waarde: "> 20m", count: null },
+      ]
+    },
+    {
+      name: "typeSluis", label: "Type sluis", model: "Watersysteem",
+      type: "SluisType", eenheid: null,
+      values: [
+        { waarde: "Keersluis", count: null },
+        { waarde: "Uitwateringssluis/spuisluis", count: null },
+        { waarde: "Inlaatsluis", count: null },
+        { waarde: "Schutsluis naar één zijde", count: null },
+        { waarde: "Schutsluis naar twee zijden", count: null },
+        { waarde: "Keersluis naar twee zijden", count: null },
+        { waarde: "Damsluis", count: null },
+        { waarde: "Overig", count: null },
+      ]
+    },
+    {
+      name: "hoogteBinnenOnderkantBen", label: "Hoogte binnenonderkant benedenstrooms", model: "Watersysteem",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -2.0 m NAP", count: null },
+        { waarde: "-2.0 – -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null },
+        { waarde: "> 0.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "hoogteBinnenOnderkantBov", label: "Hoogte binnenonderkant bovenstrooms", model: "Watersysteem",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -2.0 m NAP", count: null },
+        { waarde: "-2.0 – -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null },
+        { waarde: "> 0.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "richting", label: "Richting (geografisch)", model: "Watersysteem",
+      type: "Single", eenheid: null,
+      values: [
+        { waarde: "Noord–Zuid", count: null },
+        { waarde: "Oost–West", count: null },
+        { waarde: "NW–ZO", count: null },
+        { waarde: "NO–ZW", count: null },
+      ]
+    },
+    // ── Keringen-attributen ──────────────────────────────────────────────
+    {
+      name: "typeWaterkerendeConstructie", label: "Type waterkerende constructie", model: "Keringen",
+      type: "WaterkerendeConstructieType", eenheid: null,
+      values: [
+        { waarde: "Type I – zelfstandig waterkerend", count: null },
+        { waarde: "Type II – waterkerend i.c.m. grondconstructie", count: null },
+        { waarde: "Type III – waterkerend bij falen andere constructie", count: null },
+        { waarde: "Type IV – tast bij falen waterkering aan", count: null },
+      ]
+    },
+    {
+      name: "indicatieWaterkerend", label: "Indicatie waterkerend", model: "Keringen",
+      type: "JaNee", eenheid: null,
+      values: [
+        { waarde: "Ja", count: null },
+        { waarde: "Nee", count: null },
+      ]
+    },
+    {
+      name: "categorieWaterkering", label: "Categorie waterkering", model: "Keringen",
+      type: "WaterkeringCategorie", eenheid: null,
+      values: [
+        { waarde: "Primair", count: null },
+        { waarde: "Regionaal", count: null },
+        { waarde: "Overig", count: null },
+      ]
+    },
+    {
+      name: "kerendeHoogte", label: "Kerende hoogte", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null },
+        { waarde: "0.0 – 1.0 m NAP", count: null },
+        { waarde: "> 1.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "signaleringspeil", label: "Signaleringspeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "0.5 – 1.0 m NAP", count: null },
+        { waarde: "> 1.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "sluitpeil", label: "Sluitpeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "> 0.5 m NAP", count: null },
+      ]
+    },
+    {
+      name: "openkeerpeil", label: "Openkeerpeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "> 0.5 m NAP", count: null },
+      ]
+    },
+    {
+      name: "openingspeil", label: "Openingspeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "> 0.5 m NAP", count: null },
+      ]
+    },
+    {
+      name: "drempelpeil", label: "Drempelpeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -2.0 m NAP", count: null },
+        { waarde: "-2.0 – -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null },
+        { waarde: "> 0.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "filterUitstroming", label: "Filter uitstroming aanwezig", model: "Keringen",
+      type: "JaNee", eenheid: null,
+      values: [
+        { waarde: "Ja", count: null },
+        { waarde: "Nee", count: null },
+      ]
+    },
+    {
+      name: "ontwerpBuitenWaterstand", label: "Ontwerp buitenwaterstand", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 1.0 m NAP", count: null },
+        { waarde: "1.0 – 2.0 m NAP", count: null },
+        { waarde: "> 2.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "breedteOpening", label: "Breedte opening", model: "Keringen",
+      type: "Double", eenheid: "m",
+      values: [
+        { waarde: "< 2m", count: null },
+        { waarde: "2 – 5m", count: null },
+        { waarde: "5 – 10m", count: null },
+        { waarde: "> 10m", count: null },
+      ]
+    },
+    {
+      name: "drempelhoogte", label: "Drempelhoogte", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -2.0 m NAP", count: null },
+        { waarde: "-2.0 – -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null },
+        { waarde: "> 0.0 m NAP", count: null },
+      ]
+    },
+  ],
+};
+
+// Standaard context- en RAMS-attributen (zelf gedefinieerd, niet uit DAMO)
+const DEFAULT_CONTEXT_ATTRS = [
+  { name: "Omgevingstype", label: "Omgevingstype", values: [
+    { waarde: "Boerenland", count: null },
+    { waarde: "Woongebied", count: null },
+    { waarde: "Broedgebied", count: null },
+    { waarde: "Voetgangersgebied", count: null },
+    { waarde: "Afgelegen", count: null },
+  ]},
+  { name: "NabijDieren", label: "Nabij dieren", values: [
+    { waarde: "Ja", count: null },
+    { waarde: "Nee", count: null },
+  ]},
+  { name: "Vispassagegebied", label: "In vispassagegebied", values: [
+    { waarde: "Ja", count: null },
+    { waarde: "Nee", count: null },
+  ]},
+];
+
+const DEFAULT_RAMS_ATTRS = [
+  { name: "Keringskritisch", label: "Keringsfunctie kritisch", values: [
+    { waarde: "Ja – primair", count: null },
+    { waarde: "Ja – secundair", count: null },
+    { waarde: "Nee", count: null },
+  ]},
+  { name: "Bereikbaarheid", label: "Bereikbaar groot materieel", values: [
+    { waarde: "Ja", count: null },
+    { waarde: "Nee", count: null },
+    { waarde: "Seizoensgebonden", count: null },
+  ]},
+  { name: "Inspectiefrequentie", label: "Inspectiefrequentie", values: [
+    { waarde: "Jaarlijks", count: null },
+    { waarde: "2-jaarlijks", count: null },
+    { waarde: "5-jaarlijks", count: null },
+  ]},
+  { name: "Conditieklasse", label: "Conditieklasse (NEN2767)", values: [
+    { waarde: "1 – Uitstekend", count: null },
+    { waarde: "2 – Goed", count: null },
+    { waarde: "3 – Redelijk", count: null },
+    { waarde: "4 – Matig", count: null },
+    { waarde: "5 – Slecht", count: null },
+    { waarde: "6 – Zeer slecht", count: null },
+  ]},
+];
+
+// Analyse data
+const CONTEXT_VERDELING = [
+  { label: "Boerenland", count: 2891, pct: 48, color: "#ffb347" },
+  { label: "Woongebied", count: 1234, pct: 21, color: "#00c8ff" },
+  { label: "Afgelegen", count: 987, pct: 16, color: "#5a7a9a" },
+  { label: "Broedgebied", count: 612, pct: 10, color: "#00ff9d" },
+  { label: "Voetgangers", count: 276, pct: 5, color: "#ff4d6d" },
+];
+
+const RAMS_VERDELING = [
+  { label: "Kritisch", count: 892, pct: 15, color: "#ff4d6d" },
+  { label: "Normaal", count: 3241, pct: 54, color: "#00c8ff" },
+  { label: "Laag", count: 1867, pct: 31, color: "#5a7a9a" },
+];
+
+const BULK_MATRIX = [
+  { context: "Boerenland", rams: "Kritisch", count: 134 },
+  { context: "Boerenland", rams: "Normaal", count: 1876 },
+  { context: "Boerenland", rams: "Laag", count: 881 },
+  { context: "Woongebied", rams: "Kritisch", count: 412 },
+  { context: "Woongebied", rams: "Normaal", count: 689 },
+  { context: "Woongebied", rams: "Laag", count: 133 },
+  { context: "Broedgebied", rams: "Kritisch", count: 89 },
+  { context: "Broedgebied", rams: "Normaal", count: 345 },
+  { context: "Broedgebied", rams: "Laag", count: 178 },
+];
+
+const CONTEXT_TYPEN = ["Boerenland", "Woongebied", "Broedgebied"];
+const RAMS_TYPEN = ["Kritisch", "Normaal", "Laag"];
+
+// ─── Kleuren per type ─────────────────────────────────────────────────────────
+const TYPE_COLORS = {
+  stuw: "#00c8ff", gemaal: "#ff4d6d", duiker: "#ffb347",
+  brug: "#00ff9d", sluis: "#c084fc", afsluitmiddel: "#5a7a9a",
+  vispassage: "#f472b6", hevel: "#34d399",
+};
+
+// ─── Subcomponenten ───────────────────────────────────────────────────────────
+
+function StatRow({ data }) {
+  const totaal = data.reduce((s, o) => s + o.count, 0);
+  const bulkCount = data.filter(o => o.bulk).reduce((s, o) => s + o.count, 0);
+  const typeCount = data.length;
+  const bulkTypes = data.filter(o => o.bulk).length;
+
+  return (
+    <div className="stat-row">
+      <div className="stat-card">
+        <div className="stat-num">{totaal.toLocaleString("nl")}</div>
+        <div className="stat-label">Totaal kunstwerken AGV</div>
+      </div>
+      <div className="stat-card">
+        <div className="stat-num">{typeCount}</div>
+        <div className="stat-label">Objecttypen (IMWA)</div>
+      </div>
+      <div className="stat-card">
+        <div className="stat-num">{bulkCount.toLocaleString("nl")}</div>
+        <div className="stat-label">Bulk-objecten</div>
+      </div>
+      <div className="stat-card">
+        <div className="stat-num">{bulkTypes}</div>
+        <div className="stat-label">Bulk-objecttypen</div>
+      </div>
+    </div>
+  );
+}
+
+function KaartTab({ objecten, typeFilter, setTypeFilter }) {
+  const [tooltip, setTooltip] = useState(null);
+  const [selected, setSelected] = useState(null);
+
+  const gefilterd = typeFilter === "all"
+    ? objecten
+    : objecten.filter(o => o.type === typeFilter);
+
+  return (
+    <div>
+      <StatRow data={OBJECTTYPEN} />
+      <div className="map-layout">
+        <div className="sidebar">
+          <div className="sidebar-title">// Filters</div>
+          <div className="filter-group">
+            <div className="filter-label">OBJECTTYPE</div>
+            <select className="filter-select" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+              <option value="all">Alle typen</option>
+              {OBJECTTYPEN.map(o => (
+                <option key={o.id} value={o.id}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ marginTop: 16 }}>
+            <div className="sidebar-title">// Legenda</div>
+            {OBJECTTYPEN.slice(0, 6).map(o => (
+              <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <div style={{ width: 10, height: 10, borderRadius: "50%", background: TYPE_COLORS[o.id], flexShrink: 0 }} />
+                <span style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--muted)" }}>{o.label}</span>
+                <span style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--accent)", marginLeft: "auto" }}>{o.count}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ marginTop: 16 }}>
+            <div className="sidebar-title">// Bulk status</div>
+            <div style={{ display: "flex", gap: 8, flexDirection: "column" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 10, height: 10, border: "2px solid var(--bulk)", borderRadius: "50%" }} />
+                <span style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--muted)" }}>Bulk object</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 10, height: 10, border: "2px solid var(--nobulk)", borderRadius: "50%" }} />
+                <span style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--muted)" }}>Niet bulk</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: "auto", paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+            <div className="loading">
+              <div className="spinner" />
+              PDOK live data
+            </div>
+            <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", marginTop: 4 }}>
+              AGV beheergebied<br />
+              OGC API · IMWA Kunstwerken
+            </div>
+          </div>
+        </div>
+
+        <div className="map-container">
+          <div className="map-grid" />
+          {/* SVG kaart — gesimuleerde punten in AGV-gebied */}
+          <svg className="map-svg" viewBox="0 0 600 520">
+            {/* Waterlijnen AGV-stijl */}
+            <path d="M 80 260 Q 200 220 320 240 Q 440 260 560 230" stroke="rgba(0,200,255,0.15)" strokeWidth="3" fill="none" />
+            <path d="M 120 380 Q 240 360 360 380 Q 480 400 560 370" stroke="rgba(0,200,255,0.1)" strokeWidth="2" fill="none" />
+            <path d="M 200 80 Q 220 200 240 300 Q 260 380 280 460" stroke="rgba(0,200,255,0.12)" strokeWidth="2" fill="none" />
+            <path d="M 350 80 Q 370 180 380 280 Q 390 360 400 460" stroke="rgba(0,200,255,0.1)" strokeWidth="1.5" fill="none" />
+
+            {/* AGV-grens gesimuleerd */}
+            <path d="M 80 80 L 520 80 L 560 200 L 540 420 L 420 480 L 120 460 L 60 320 L 80 80"
+              stroke="rgba(0,200,255,0.2)" strokeWidth="1" fill="rgba(0,200,255,0.02)"
+              strokeDasharray="6 4" />
+
+            {/* Objectpunten */}
+            {gefilterd.map(obj => (
+              <g key={obj.id}>
+                <circle
+                  cx={obj.x} cy={obj.y} r={5}
+                  fill={TYPE_COLORS[obj.type]}
+                  stroke={obj.bulk ? "var(--bulk)" : "var(--nobulk)"}
+                  strokeWidth={2}
+                  opacity={0.85}
+                  className="map-point"
+                  onMouseEnter={e => setTooltip({ obj, mx: e.clientX, my: e.clientY })}
+                  onMouseLeave={() => setTooltip(null)}
+                  onClick={() => setSelected(selected?.id === obj.id ? null : obj)}
+                />
+                {selected?.id === obj.id && (
+                  <circle cx={obj.x} cy={obj.y} r={10}
+                    fill="none" stroke="var(--accent)" strokeWidth={1.5}
+                    strokeDasharray="3 2" />
+                )}
+              </g>
+            ))}
+
+            {/* Labels */}
+            <text x={88} y={74} fill="rgba(0,200,255,0.4)" fontSize={9} fontFamily="DM Mono" letterSpacing={2}>AGV BEHEERGEBIED</text>
+          </svg>
+
+          {tooltip && (
+            <div className="map-tooltip" style={{
+              left: tooltip.mx - 160,
+              top: tooltip.my - 120,
+              position: "fixed"
+            }}>
+              <div className="map-tooltip-title">{tooltip.obj.name}</div>
+              <div className="map-tooltip-row">
+                <span>Type</span>
+                <span className="map-tooltip-val">{tooltip.obj.type}</span>
+              </div>
+              <div className="map-tooltip-row">
+                <span>Context</span>
+                <span className="map-tooltip-val">{tooltip.obj.context}</span>
+              </div>
+              <div className="map-tooltip-row">
+                <span>RAMS</span>
+                <span className="map-tooltip-val">{tooltip.obj.rams}</span>
+              </div>
+              <div className="map-tooltip-row">
+                <span>Bulk</span>
+                <span className="map-tooltip-val" style={{ color: tooltip.obj.bulk ? "var(--bulk)" : "var(--nobulk)" }}>
+                  {tooltip.obj.bulk ? "Ja" : "Nee"}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {selected && (
+        <div className="detail-panel">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontFamily: "DM Mono", fontSize: 11, color: "var(--accent)", letterSpacing: 2 }}>
+              // OBJECT DETAIL
+            </div>
+            <button onClick={() => setSelected(null)} style={{ background: "none", border: "1px solid var(--border)", color: "var(--muted)", padding: "2px 8px", cursor: "pointer", fontFamily: "DM Mono", fontSize: 10 }}>
+              SLUIT
+            </button>
+          </div>
+          <div className="detail-grid">
+            <div className="detail-item">
+              <div className="detail-key">Naam</div>
+              <div className="detail-val">{selected.name}</div>
+            </div>
+            <div className="detail-item">
+              <div className="detail-key">Type (IMWA)</div>
+              <div className="detail-val" style={{ color: TYPE_COLORS[selected.type] }}>{selected.type}</div>
+            </div>
+            <div className="detail-item">
+              <div className="detail-key">Bulk</div>
+              <div className="detail-val" style={{ color: selected.bulk ? "var(--bulk)" : "var(--nobulk)" }}>
+                {selected.bulk ? "Bulk object" : "Niet bulk"}
+              </div>
+            </div>
+            <div className="detail-item">
+              <div className="detail-key">Context-as</div>
+              <div className="detail-val"><span className="tag context">{selected.context}</span></div>
+            </div>
+            <div className="detail-item">
+              <div className="detail-key">RAMS-as</div>
+              <div className="detail-val"><span className="tag rams">{selected.rams}</span></div>
+            </div>
+            <div className="detail-item">
+              <div className="detail-key">Standaard</div>
+              <div className="detail-val"><span className="tag func">DAMO 2.3 · IMWA</span></div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DecompositieTab() {
+  const [selected, setSelected] = useState("stuw");
+  // Per objecttype: welke attributen zijn clusterattributen (set van attr.name)
+  const [clusterAttrs, setClusterAttrs] = useState({});
+  // Per objecttype+attribuut+waarde: "bulk" | "maatwerk" | null
+  const [waardeStatus, setWaardeStatus] = useState({});
+  // Context-as: zelf aangemaakte attributen per objecttype
+  const [contextAttrs, setContextAttrs] = useState({ stuw: DEFAULT_CONTEXT_ATTRS.map(a => ({ ...a, values: a.values.map(v => ({ ...v })) })) });
+  // RAMS-as: zelf aangemaakte attributen per objecttype
+  const [ramsAttrs, setRamsAttrs] = useState({ stuw: DEFAULT_RAMS_ATTRS.map(a => ({ ...a, values: a.values.map(v => ({ ...v })) })) });
+  // Nieuw attribuut toevoegen state
+  const [newAttr, setNewAttr] = useState({ ctx: { name: "", waarden: "" }, rams: { name: "", waarden: "" } });
+
+  const obj = OBJECTTYPEN.find(o => o.id === selected);
+  const damoAttrs = DAMO_ATTRIBUTEN[selected] || [];
+  const ctxAttrs = contextAttrs[selected] || DEFAULT_CONTEXT_ATTRS.map(a => ({ ...a, values: a.values.map(v => ({ ...v })) }));
+  const rmAttrs = ramsAttrs[selected] || DEFAULT_RAMS_ATTRS.map(a => ({ ...a, values: a.values.map(v => ({ ...v })) }));
+
+  function isCluster(attrName) {
+    return !!(clusterAttrs[selected] && clusterAttrs[selected].has(attrName));
+  }
+  function toggleCluster(attrName) {
+    setClusterAttrs(s => {
+      const set = new Set(s[selected] || []);
+      set.has(attrName) ? set.delete(attrName) : set.add(attrName);
+      return { ...s, [selected]: set };
+    });
+  }
+  function getWaardeStatus(attrName, waarde) {
+    return waardeStatus[`${selected}__${attrName}__${waarde}`] || null;
+  }
+  function setWaarde(attrName, waarde, status) {
+    const key = `${selected}__${attrName}__${waarde}`;
+    setWaardeStatus(s => ({ ...s, [key]: s[key] === status ? null : status }));
+  }
+
+  function addCustomAttr(as) {
+    const val = newAttr[as];
+    if (!val.name.trim()) return;
+    const waarden = val.waarden.split(",").map(w => w.trim()).filter(Boolean);
+    if (!waarden.length) return;
+    const attr = { name: val.name.trim(), label: val.name.trim(), values: waarden.map(w => ({ waarde: w, count: null })) };
+    if (as === "ctx") {
+      setContextAttrs(s => ({ ...s, [selected]: [...(s[selected] || DEFAULT_CONTEXT_ATTRS), attr] }));
+    } else {
+      setRamsAttrs(s => ({ ...s, [selected]: [...(s[selected] || DEFAULT_RAMS_ATTRS), attr] }));
+    }
+    setNewAttr(s => ({ ...s, [as]: { name: "", waarden: "" } }));
+  }
+
+  // Tel clusterattributen en bulk-waarden voor samenvatting
+  const clusterSet = clusterAttrs[selected] || new Set();
+  const clusterCount = clusterSet.size;
+  const bulkWaardeCount = Object.entries(waardeStatus).filter(([k, v]) => k.startsWith(selected + "__") && v === "bulk").length;
+
+  function AttrBlok({ attr, bronLabel }) {
+    const actief = isCluster(attr.name);
+    return (
+      <div style={{
+        border: `1px solid ${actief ? "var(--accent)" : "var(--border)"}`,
+        background: actief ? "rgba(0,200,255,0.04)" : "var(--panel2)",
+        marginBottom: 6, transition: "all 0.2s"
+      }}>
+        {/* Attribuutregel — altijd zichtbaar */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", cursor: "pointer" }}
+          onClick={() => toggleCluster(attr.name)}>
+          <div style={{
+            width: 16, height: 16, border: `1px solid ${actief ? "var(--accent)" : "var(--border)"}`,
+            background: actief ? "var(--accent)" : "transparent",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0, transition: "all 0.15s"
+          }}>
+            {actief && <span style={{ color: "var(--bg)", fontSize: 10, fontWeight: 700 }}>✓</span>}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ fontSize: 12, fontWeight: actief ? 600 : 400, color: actief ? "var(--text)" : "var(--muted)" }}>
+              {attr.label}
+            </span>
+            {attr.eenheid && (
+              <span style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", marginLeft: 6 }}>
+                [{attr.eenheid}]
+              </span>
+            )}
+            <div style={{ display: "flex", gap: 4, marginTop: 2, flexWrap: "wrap" }}>
+              {bronLabel && (
+                <span style={{ fontFamily: "DM Mono", fontSize: 8, color: "var(--muted)", border: "1px solid var(--border)", padding: "1px 4px" }}>
+                  {bronLabel}
+                </span>
+              )}
+              {attr.model && (
+                <span style={{ fontFamily: "DM Mono", fontSize: 8, color: "var(--accent)", border: "1px solid rgba(0,200,255,0.3)", padding: "1px 4px" }}>
+                  {attr.model}
+                </span>
+              )}
+              {attr.type && (
+                <span style={{ fontFamily: "DM Mono", fontSize: 8, color: "var(--muted)", padding: "1px 4px" }}>
+                  {attr.type}
+                </span>
+              )}
+            </div>
+          </div>
+          {actief
+            ? <span style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--accent)", letterSpacing: 1, flexShrink: 0 }}>CLUSTERATTRIBUUT</span>
+            : <span style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", flexShrink: 0 }}>niet meegenomen</span>
+          }
+        </div>
+
+        {/* Waarden — alleen zichtbaar als clusterattribuut aangeklikt */}
+        {actief && (
+          <div style={{ borderTop: "1px solid var(--border)", padding: "0 0 8px 0" }}>
+            {/* Kolomkoppen */}
+            <div style={{
+              display: "grid", gridTemplateColumns: "1fr 52px 80px 100px",
+              gap: 0, padding: "8px 14px 6px 42px",
+              borderBottom: "1px solid var(--border)"
+            }}>
+              <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", letterSpacing: 1 }}>WAARDE</div>
+              <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", letterSpacing: 1, textAlign: "right" }}>AANTAL</div>
+              <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", letterSpacing: 1, textAlign: "center" }}>BULK</div>
+              <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", letterSpacing: 1, textAlign: "center" }}>MAATWERK</div>
+            </div>
+            {/* Één regel per waarde */}
+            {attr.values.map(v => {
+              const status = getWaardeStatus(attr.name, v.waarde);
+              const isBulk = status === "bulk";
+              const isMaatwerk = status === "maatwerk";
+              return (
+                <div key={v.waarde} style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 52px 80px 100px",
+                  gap: 0,
+                  alignItems: "center",
+                  padding: "9px 14px 9px 42px",
+                  borderBottom: "1px solid rgba(30,58,95,0.5)",
+                  background: isBulk
+                    ? "rgba(0,255,157,0.06)"
+                    : isMaatwerk
+                    ? "rgba(255,77,109,0.06)"
+                    : "transparent",
+                  transition: "background 0.15s",
+                }}>
+                  {/* Waarde naam */}
+                  <div style={{
+                    fontSize: 12,
+                    color: isBulk ? "var(--bulk)" : isMaatwerk ? "var(--nobulk)" : "var(--text)",
+                    fontWeight: (isBulk || isMaatwerk) ? 600 : 400,
+                  }}>{v.waarde}</div>
+
+                  {/* Aantal */}
+                  <div style={{
+                    fontFamily: "DM Mono", fontSize: 12,
+                    color: "var(--muted)", textAlign: "right"
+                  }}>
+                    {v.count !== null ? v.count : "—"}
+                  </div>
+
+                  {/* Bulk knop */}
+                  <div style={{ display: "flex", justifyContent: "center" }}>
+                    <button
+                      onClick={e => { e.stopPropagation(); setWaarde(attr.name, v.waarde, "bulk"); }}
+                      style={{
+                        width: 64, padding: "5px 0",
+                        fontSize: 9, fontFamily: "DM Mono", letterSpacing: 1,
+                        cursor: "pointer",
+                        border: `1px solid var(--bulk)`,
+                        background: isBulk ? "var(--bulk)" : "transparent",
+                        color: isBulk ? "var(--bg)" : "var(--bulk)",
+                        fontWeight: isBulk ? 700 : 400,
+                        transition: "all 0.15s"
+                      }}>
+                      {isBulk ? "✓ BULK" : "BULK"}
+                    </button>
+                  </div>
+
+                  {/* Maatwerk knop */}
+                  <div style={{ display: "flex", justifyContent: "center" }}>
+                    <button
+                      onClick={e => { e.stopPropagation(); setWaarde(attr.name, v.waarde, "maatwerk"); }}
+                      style={{
+                        width: 80, padding: "5px 0",
+                        fontSize: 9, fontFamily: "DM Mono", letterSpacing: 1,
+                        cursor: "pointer",
+                        border: `1px solid var(--nobulk)`,
+                        background: isMaatwerk ? "var(--nobulk)" : "transparent",
+                        color: isMaatwerk ? "var(--bg)" : "var(--nobulk)",
+                        fontWeight: isMaatwerk ? 700 : 400,
+                        transition: "all 0.15s"
+                      }}>
+                      {isMaatwerk ? "✓ MAATWERK" : "MAATWERK"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function NieuwAttrForm({ as, label }) {
+    return (
+      <div style={{ marginTop: 12, padding: 12, border: "1px dashed var(--border)", background: "rgba(0,200,255,0.02)" }}>
+        <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--accent)", letterSpacing: 2, marginBottom: 8 }}>
+          + ATTRIBUUT TOEVOEGEN
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <input
+            placeholder="Attribuutnaam"
+            value={newAttr[as].name}
+            onChange={e => setNewAttr(s => ({ ...s, [as]: { ...s[as], name: e.target.value } }))}
+            style={{ background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text)", padding: "6px 10px", fontFamily: "DM Mono", fontSize: 11, flex: "1 1 140px" }}
+          />
+          <input
+            placeholder="Waarden (komma-gescheiden)"
+            value={newAttr[as].waarden}
+            onChange={e => setNewAttr(s => ({ ...s, [as]: { ...s[as], waarden: e.target.value } }))}
+            style={{ background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text)", padding: "6px 10px", fontFamily: "DM Mono", fontSize: 11, flex: "2 1 200px" }}
+          />
+          <button
+            onClick={() => addCustomAttr(as)}
+            style={{ padding: "6px 16px", background: "none", border: "1px solid var(--accent)", color: "var(--accent)", fontFamily: "DM Mono", fontSize: 10, cursor: "pointer", letterSpacing: 1 }}
+          >VOEG TOE</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 16 }}>
+      {/* Objecttype selector */}
+      <div className="tree-panel">
+        <div className="sidebar-title">// Objecttype · IMWA</div>
+        {OBJECTTYPEN.map(o => (
+          <div
+            key={o.id}
+            className={`tree-node ${selected === o.id ? "selected" : ""}`}
+            onClick={() => setSelected(o.id)}
+          >
+            <span style={{ color: TYPE_COLORS[o.id], marginRight: 6 }}>▸</span>
+            {o.label}
+            <span style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", float: "right" }}>
+              {o.count}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Hoofdpaneel */}
+      <div>
+        {/* Header */}
+        <div style={{ background: "var(--panel)", border: "1px solid var(--border)", padding: "16px 20px", marginBottom: 16, display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: TYPE_COLORS[selected] }}>{obj?.label}</div>
+          <div style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--muted)" }}>
+            DAMO 2.3 · IMWA · {obj?.count} objecten in AGV
+          </div>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 16 }}>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontFamily: "DM Mono", fontSize: 18, color: "var(--accent)" }}>{clusterCount}</div>
+              <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)" }}>clusterattributen</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontFamily: "DM Mono", fontSize: 18, color: "var(--bulk)" }}>{bulkWaardeCount}</div>
+              <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)" }}>bulk-waarden</div>
+            </div>
+          </div>
+        </div>
+
+        {/* ─── As 1: Functionele as (DAMO) ─── */}
+        <div style={{ background: "var(--panel)", border: "1px solid var(--border)", padding: 20, marginBottom: 16 }}>
+          <div className="axis-title">Functionele as · DAMO 2.6-attributen</div>
+          <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", marginBottom: 14, letterSpacing: 1 }}>
+            KLIK OP EEN ATTRIBUUT OM HET MEE TE NEMEN ALS CLUSTERATTRIBUUT · BRON: DAMO 2.6 HET WATERSCHAPSHUIS
+          </div>
+          {damoAttrs.length > 0 ? (
+            <>
+              {/* Watersysteem-attributen */}
+              {damoAttrs.filter(a => a.model === "Watersysteem").length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--accent)", letterSpacing: 2, marginBottom: 6, paddingLeft: 4 }}>
+                    MODEL: WATERSYSTEEM
+                  </div>
+                  {damoAttrs.filter(a => a.model === "Watersysteem").map(attr => (
+                    <AttrBlok key={attr.name} attr={attr} bronLabel="DAMO 2.6" />
+                  ))}
+                </div>
+              )}
+              {/* Keringen-attributen */}
+              {damoAttrs.filter(a => a.model === "Keringen").length > 0 && (
+                <div>
+                  <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--warn)", letterSpacing: 2, marginBottom: 6, paddingLeft: 4, marginTop: 8 }}>
+                    MODEL: KERINGEN
+                  </div>
+                  {damoAttrs.filter(a => a.model === "Keringen").map(attr => (
+                    <AttrBlok key={attr.name} attr={attr} bronLabel="DAMO 2.6" />
+                  ))}
+                </div>
+              )}
+              {/* Overige attributen zonder model */}
+              {damoAttrs.filter(a => !a.model).map(attr => (
+                <AttrBlok key={attr.name} attr={attr} bronLabel="DAMO 2.6" />
+              ))}
+            </>
+          ) : (
+            <div style={{ fontFamily: "DM Mono", fontSize: 11, color: "var(--muted)", padding: 12 }}>
+              Geen DAMO-attributen beschikbaar voor dit objecttype
+            </div>
+          )}
+        </div>
+
+        {/* ─── As 2: Context-as (zelf) ─── */}
+        <div style={{ background: "var(--panel)", border: "1px solid var(--border)", padding: 20, marginBottom: 16 }}>
+          <div className="axis-title">Context-as · Omgevingsattributen</div>
+          <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", marginBottom: 14, letterSpacing: 1 }}>
+            ZELF GEDEFINIEERD · NIET UIT DAMO · VOEG TOE OF WIJZIG
+          </div>
+          {ctxAttrs.map(attr => <AttrBlok key={attr.name} attr={attr} bronLabel="eigen" />)}
+          <NieuwAttrForm as="ctx" label="Context" />
+        </div>
+
+        {/* ─── As 3: RAMS-as (zelf) ─── */}
+        <div style={{ background: "var(--panel)", border: "1px solid var(--border)", padding: 20 }}>
+          <div className="axis-title">RAMS-as · Beheer & Betrouwbaarheid</div>
+          <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", marginBottom: 14, letterSpacing: 1 }}>
+            ZELF GEDEFINIEERD · NEN2767-4 · OBS/OBG · VOEG TOE OF WIJZIG
+          </div>
+          {rmAttrs.map(attr => <AttrBlok key={attr.name} attr={attr} bronLabel="eigen" />)}
+          <NieuwAttrForm as="rams" label="RAMS" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AnalyseTab() {
+  const [selectedCell, setSelectedCell] = useState(null);
+  const maxCount = Math.max(...BULK_MATRIX.map(c => c.count));
+
+  return (
+    <div className="analyse-layout">
+      <div className="chart-row">
+        {/* Context verdeling */}
+        <div className="chart-panel">
+          <div className="chart-title">// Context-as verdeling</div>
+          <div className="chart-sub">Alle kunstwerken AGV naar omgevingstype</div>
+          {CONTEXT_VERDELING.map(item => (
+            <div className="bar-item" key={item.label}>
+              <div className="bar-label">{item.label}</div>
+              <div className="bar-track">
+                <div className="bar-fill" style={{ width: `${item.pct}%`, background: item.color }} />
+              </div>
+              <div className="bar-value">{item.count}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* RAMS verdeling */}
+        <div className="chart-panel">
+          <div className="chart-title">// RAMS-as verdeling</div>
+          <div className="chart-sub">Alle kunstwerken AGV naar kritikaliteit</div>
+          {RAMS_VERDELING.map(item => (
+            <div className="bar-item" key={item.label}>
+              <div className="bar-label">{item.label}</div>
+              <div className="bar-track">
+                <div className="bar-fill" style={{ width: `${item.pct}%`, background: item.color }} />
+              </div>
+              <div className="bar-value">{item.count}</div>
+            </div>
+          ))}
+
+          <div style={{ marginTop: 24 }}>
+            <div className="chart-title">// Objecttype verdeling</div>
+            <div className="chart-sub">Aantallen per IMWA-type</div>
+            {OBJECTTYPEN.map(o => {
+              const pct = Math.round((o.count / 6645) * 100);
+              return (
+                <div className="bar-item" key={o.id}>
+                  <div className="bar-label">{o.label}</div>
+                  <div className="bar-track">
+                    <div className="bar-fill" style={{ width: `${pct}%`, background: TYPE_COLORS[o.id] }} />
+                  </div>
+                  <div className="bar-value">{o.count}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Bulk matrix */}
+      <div className="chart-panel">
+        <div className="chart-title">// Bulk-matrix · Context × RAMS</div>
+        <div className="chart-sub">Aantal objecten per combinatie van assen — basis voor eisenset-clustering</div>
+
+        <div style={{ display: "grid", gridTemplateColumns: `120px repeat(${RAMS_TYPEN.length}, 1fr)`, gap: 4, marginTop: 16 }}>
+          <div className="matrix-cell matrix-header" />
+          {RAMS_TYPEN.map(r => (
+            <div key={r} className="matrix-cell matrix-header">{r}</div>
+          ))}
+          {CONTEXT_TYPEN.map(ctx => (
+            <>
+              <div key={ctx} className="matrix-cell matrix-header">{ctx}</div>
+              {RAMS_TYPEN.map(rams => {
+                const cell = BULK_MATRIX.find(c => c.context === ctx && c.rams === rams);
+                const count = cell?.count || 0;
+                const intensity = count / maxCount;
+                const isSelected = selectedCell?.context === ctx && selectedCell?.rams === rams;
+                return (
+                  <div
+                    key={rams}
+                    className={`matrix-cell ${isSelected ? "selected" : ""}`}
+                    style={{
+                      background: `rgba(0,200,255,${intensity * 0.3})`,
+                      borderColor: isSelected ? "var(--accent)" : "var(--border)",
+                    }}
+                    onClick={() => setSelectedCell(isSelected ? null : { context: ctx, rams })}
+                  >
+                    <div className="matrix-count">{count}</div>
+                    <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)" }}>objecten</div>
+                    {count > 500 && <div style={{ fontFamily: "DM Mono", fontSize: 8, color: "var(--bulk)", marginTop: 2 }}>BULK CLUSTER</div>}
+                  </div>
+                );
+              })}
+            </>
+          ))}
+        </div>
+
+        {selectedCell && (
+          <div style={{ marginTop: 16, padding: 12, background: "var(--panel2)", border: "1px solid var(--accent)", fontFamily: "DM Mono", fontSize: 11 }}>
+            <span style={{ color: "var(--accent)" }}>// CLUSTER: </span>
+            <span className="tag context">{selectedCell.context}</span>
+            <span className="tag rams">{selectedCell.rams}</span>
+            <span style={{ color: "var(--muted)", marginLeft: 8 }}>
+              → {BULK_MATRIX.find(c => c.context === selectedCell.context && c.rams === selectedCell.rams)?.count} objecten
+              → {BULK_MATRIX.find(c => c.context === selectedCell.context && c.rams === selectedCell.rams)?.count > 500 ? "aanbevolen voor één bulk-eisenset" : "mogelijk maatwerk vereist"}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Hoofdapp ────────────────────────────────────────────────────────────────
+function App() {
+  const [tab, setTab] = useState("kaart");
+  const [typeFilter, setTypeFilter] = useState("all");
+
+  return (
+    <>
+      <style>{CSS}</style>
+      <div className="header">
+        <div className="logo">AGV</div>
+        <div>
+          <div className="header-title">Kunstwerken Standaardisatie</div>
+          <div className="header-sub">IMWA · DAMO 2.3 · PDOK · WILMA — Amstel, Gooi en Vecht</div>
+        </div>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+          <div className="status-dot" />
+          <div className="status-label">PDOK LIVE</div>
+        </div>
+      </div>
+
+      <div className="tabs">
+        {[
+          { id: "kaart", label: "01 · Kaart" },
+          { id: "decompositie", label: "02 · Attributen" },
+          { id: "analyse", label: "03 · Analyse" },
+        ].map(t => (
+          <button key={t.id} className={`tab ${tab === t.id ? "active" : ""}`} onClick={() => setTab(t.id)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="main">
+        {tab === "kaart" && <KaartTab objecten={KAART_OBJECTEN} typeFilter={typeFilter} setTypeFilter={setTypeFilter} />}
+        {tab === "decompositie" && <DecompositieTab />}
+        {tab === "analyse" && <AnalyseTab />}
+      </div>
+    </>
+  );
+}
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
