@@ -1649,126 +1649,7 @@ const DAMO_ATTRIBUTEN = {
       ]
     },
   ],
-    // ── Watersysteem-attributen ──────────────────────────────────────────
-    {
-      name: "typeVispassage", label: "Type vispassage", model: "Watersysteem",
-      type: "VispassageType", eenheid: null,
-      values: [
-        { waarde: "Vislift", count: null },
-        { waarde: "Vistrap", count: 2 },
-        { waarde: "Aalpijp", count: null },
-        { waarde: "Vissluis", count: 6 },
-        { waarde: "Deniltrap", count: null },
-        { waarde: "Bekkentrap", count: null },
-        { waarde: "Lokstroomgemaal", count: null },
-        { waarde: "Overig", count: null },
-        { waarde: "Onbekend", count: 1 },
-      ]
-    },
-    {
-      name: "richting", label: "Richting (geografisch)", model: "Watersysteem",
-      type: "Single", eenheid: null,
-      values: [
-        { waarde: "Noord–Zuid", count: null },
-        { waarde: "Oost–West", count: null },
-        { waarde: "NW–ZO", count: null },
-        { waarde: "NO–ZW", count: null },
-      ]
-    },
-    // ── Keringen-attributen ──────────────────────────────────────────────
-    {
-      name: "categorieWaterkering", label: "Categorie waterkering", model: "Keringen",
-      type: "WaterkeringCategorie", eenheid: null,
-      values: [
-        { waarde: "Primair", count: null },
-        { waarde: "Regionaal", count: null },
-        { waarde: "Overig", count: null },
-      ]
-    },
-    {
-      name: "kerendeHoogte", label: "Kerende hoogte", model: "Keringen",
-      type: "Double", eenheid: "m NAP",
-      values: [
-        { waarde: "< -1.0 m NAP", count: null },
-        { waarde: "-1.0 – 0.0 m NAP", count: null },
-        { waarde: "0.0 – 1.0 m NAP", count: null },
-        { waarde: "> 1.0 m NAP", count: null },
-      ]
-    },
-    {
-      name: "drempelpeil", label: "Drempelpeil", model: "Keringen",
-      type: "Double", eenheid: "m NAP",
-      values: [
-        { waarde: "< -2.0 m NAP", count: null },
-        { waarde: "-2.0 – -1.0 m NAP", count: null },
-        { waarde: "-1.0 – 0.0 m NAP", count: null },
-        { waarde: "> 0.0 m NAP", count: null },
-      ]
-    },
-    {
-      name: "signaleringspeil", label: "Signaleringspeil", model: "Keringen",
-      type: "Double", eenheid: "m NAP",
-      values: [
-        { waarde: "< 0.0 m NAP", count: null },
-        { waarde: "0.0 – 0.5 m NAP", count: null },
-        { waarde: "> 0.5 m NAP", count: null },
-      ]
-    },
-    {
-      name: "sluitpeil", label: "Sluitpeil", model: "Keringen",
-      type: "Double", eenheid: "m NAP",
-      values: [
-        { waarde: "< 0.0 m NAP", count: null },
-        { waarde: "0.0 – 0.5 m NAP", count: null },
-        { waarde: "> 0.5 m NAP", count: null },
-      ]
-    },
-    {
-      name: "openkeerpeil", label: "Openkeerpeil", model: "Keringen",
-      type: "Double", eenheid: "m NAP",
-      values: [
-        { waarde: "< 0.0 m NAP", count: null },
-        { waarde: "0.0 – 0.5 m NAP", count: null },
-        { waarde: "> 0.5 m NAP", count: null },
-      ]
-    },
-    {
-      name: "openingspeil", label: "Openingspeil", model: "Keringen",
-      type: "Double", eenheid: "m NAP",
-      values: [
-        { waarde: "< 0.0 m NAP", count: null },
-        { waarde: "0.0 – 0.5 m NAP", count: null },
-        { waarde: "> 0.5 m NAP", count: null },
-      ]
-    },
-    {
-      name: "ontwerpBuitenWaterstand", label: "Ontwerp buitenwaterstand", model: "Keringen",
-      type: "Double", eenheid: "m NAP",
-      values: [
-        { waarde: "< 0.0 m NAP", count: null },
-        { waarde: "0.0 – 1.0 m NAP", count: null },
-        { waarde: "> 1.0 m NAP", count: null },
-      ]
-    },
-    {
-      name: "breedteOpening", label: "Breedte opening", model: "Keringen",
-      type: "Double", eenheid: "m",
-      values: [
-        { waarde: "< 0.5m", count: null },
-        { waarde: "0.5 – 1.0m", count: null },
-        { waarde: "1.0 – 2.0m", count: null },
-        { waarde: "> 2.0m", count: null },
-      ]
-    },
-    {
-      name: "indicatieWaterkerend", label: "Indicatie waterkerend", model: "Keringen",
-      type: "JaNee", eenheid: null,
-      values: [
-        { waarde: "Ja", count: null },
-        { waarde: "Nee", count: null },
-      ]
-    },
-  // Bron: DAMO 2.6 Objectenhandboek VasteDam — Het Waterschapshuis (2025)
+  // Bron: DAMO 2.6 Objectenhandboek Vispassage — Het Waterschapshuis (2025)
   vastedam: [
     // ── Watersysteem-attributen (alle attributen VasteDam zijn Watersysteem) ─
     {
@@ -1956,7 +1837,6 @@ function detectType(collectie) {
     stuw: "stuw", gemaal: "gemaal", duiker: "duiker", sifon: "duiker", hevel: "duiker",
     brug: "brug", sluis: "sluis", afsluitmiddel: "afsluitmiddel",
     vispassage: "vispassage", vastedam: "vastedam",
-    vispassage: "vispassage",
   };
   return map[collectie] || collectie;
 }
@@ -1976,9 +1856,11 @@ function LeafletKaart({ typeFilter, setTypeFilter, bronhouder, setBronhouder }) 
   // Initialiseer Leaflet kaart
   useEffect(() => {
     if (leafletMap.current) return;
-    leafletMap.current = L.map(mapRef.current, {
+    const map = L.map(mapRef.current, {
       center: bron.center, zoom: bron.zoom, zoomControl: true,
     });
+    leafletMap.current = map;
+    return () => { map.remove(); leafletMap.current = null; };
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
       subdomains: "abcd", maxZoom: 19,
@@ -1986,7 +1868,14 @@ function LeafletKaart({ typeFilter, setTypeFilter, bronhouder, setBronhouder }) 
     markersLayer.current = L.layerGroup().addTo(leafletMap.current);
   }, []);
 
+  const abortRef = useRef(null);
+
   async function fetchCollectie(collectieNaam) {
+    // Annuleer vorige request
+    if (abortRef.current) abortRef.current.abort();
+    abortRef.current = new AbortController();
+    const signal = abortRef.current.signal;
+
     setStatus("loading");
     setSelected(null);
     setActieveCollectie(collectieNaam);
@@ -2064,6 +1953,7 @@ function LeafletKaart({ typeFilter, setTypeFilter, bronhouder, setBronhouder }) 
       }
 
     } catch (err) {
+      if (err.name === "AbortError") return; // Gewoon geannuleerd
       console.error("PDOK fout:", err);
       setStatus("error");
     }
@@ -2500,7 +2390,7 @@ function DecompositieTab() {
         <div style={{ background: "var(--panel)", border: "1px solid var(--border)", padding: "16px 20px", marginBottom: 16, display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: TYPE_COLORS[selected] }}>{obj?.label}</div>
           <div style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--muted)" }}>
-            DAMO 2.3 · IMWA · {obj?.count ?? "?"} objecten in AGV
+            DAMO 2.6 · IMWA · {obj?.count ?? "?"} objecten in AGV
           </div>
           <div style={{ marginLeft: "auto", display: "flex", gap: 16 }}>
             <div style={{ textAlign: "right" }}>
@@ -2620,7 +2510,8 @@ function AnalyseTab() {
             <div className="chart-title">// Objecttype verdeling</div>
             <div className="chart-sub">Aantallen per IMWA-type</div>
             {OBJECTTYPEN.map(o => {
-              const pct = o.count ? Math.round((o.count / 6645) * 100) : 0;
+              const totaalObjecten = OBJECTTYPEN.reduce((s, o) => s + (o.count || 0), 0);
+              const pct = o.count && totaalObjecten ? Math.round((o.count / totaalObjecten) * 100) : 0;
               return (
                 <div className="bar-item" key={o.id}>
                   <div className="bar-label">{o.label}</div>
@@ -2646,8 +2537,8 @@ function AnalyseTab() {
             <div key={r} className="matrix-cell matrix-header">{r}</div>
           ))}
           {CONTEXT_TYPEN.map(ctx => (
-            <>
-              <div key={ctx} className="matrix-cell matrix-header">{ctx}</div>
+            <React.Fragment key={ctx}>
+              <div className="matrix-cell matrix-header">{ctx}</div>
               {RAMS_TYPEN.map(rams => {
                 const cell = BULK_MATRIX.find(c => c.context === ctx && c.rams === rams);
                 const count = cell?.count || 0;
@@ -2669,7 +2560,7 @@ function AnalyseTab() {
                   </div>
                 );
               })}
-            </>
+            </React.Fragment>
           ))}
         </div>
 
@@ -2701,7 +2592,7 @@ function App() {
         <div className="logo">AGV</div>
         <div>
           <div className="header-title">Kunstwerken Standaardisatie</div>
-          <div className="header-sub">IMWA · DAMO 2.3 · PDOK · WILMA — Amstel, Gooi en Vecht</div>
+          <div className="header-sub">IMWA · DAMO 2.6 · PDOK · WILMA — Amstel, Gooi en Vecht</div>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
           <div className="status-dot" />
