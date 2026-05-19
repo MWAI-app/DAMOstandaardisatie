@@ -416,14 +416,16 @@ const CSS = `
 
 // ─── Demo data (realistisch voor AGV-gebied) ─────────────────────────────────
 const OBJECTTYPEN = [
-  { id: "stuw", label: "Stuw", count: 847, bulk: true },
-  { id: "gemaal", label: "Gemaal", count: 124, bulk: false },
-  { id: "duiker", label: "Duiker", count: 3241, bulk: true },
-  { id: "brug", label: "Brug", count: 412, bulk: true },
-  { id: "sluis", label: "Sluis", count: 38, bulk: false },
-  { id: "afsluitmiddel", label: "Afsluitmiddel", count: 1893, bulk: true },
-  { id: "vispassage", label: "Vispassage", count: 23, bulk: false },
-  { id: "hevel", label: "Hevel", count: 67, bulk: false },
+  { id: "stuw",         label: "Stuw",         count: 847,  bulk: true,  pdokCollectie: "stuw" },
+  { id: "gemaal",       label: "Gemaal",       count: 124,  bulk: false, pdokCollectie: "gemaal" },
+  { id: "duiker",       label: "Duiker",       count: 3241, bulk: true,  pdokCollectie: "duiker" },
+  { id: "sifon",        label: "Sifon",        count: null, bulk: false, pdokCollectie: "sifon" },
+  { id: "hevel",        label: "Hevel",        count: null, bulk: false, pdokCollectie: "hevel" },
+  { id: "brug",         label: "Brug",         count: 412,  bulk: true,  pdokCollectie: "brug" },
+  { id: "sluis",        label: "Sluis",        count: 38,   bulk: false, pdokCollectie: "sluis" },
+  { id: "afsluitmiddel",label: "Afsluitmiddel",count: 1893, bulk: true,  pdokCollectie: "afsluitmiddel" },
+  { id: "vispassage",   label: "Vispassage",   count: 23,   bulk: false, pdokCollectie: "vispassage" },
+  { id: "vastedam",    label: "Vaste Dam",    count: null, bulk: false, pdokCollectie: "vastedam" },
 ];
 
 const KAART_OBJECTEN = [
@@ -1310,8 +1312,297 @@ const DAMO_ATTRIBUTEN = {
       ]
     },
   ],
-  // Bron: DAMO 2.6 Objectenhandboek Sluis — Het Waterschapshuis (2025)
-  sluis: [
+  // Bron: DAMO 2.6 Objectenhandboek Afsluitmiddel — Het Waterschapshuis (2025)
+  afsluitmiddel: [
+    // ── Watersysteem-attributen ──────────────────────────────────────────
+    {
+      name: "typeAfsluitmiddel", label: "Type afsluitmiddel", model: "Watersysteem",
+      type: "AfsluitmiddelType", eenheid: null,
+      values: [
+        { waarde: "Deur", count: null },
+        { waarde: "Schotbalk", count: null },
+        { waarde: "Zandzakken", count: null },
+        { waarde: "Schuif", count: null },
+        { waarde: "Terugslagklep", count: null },
+        { waarde: "Tolklep", count: null },
+        { waarde: "Stuwklep", count: null },
+        { waarde: "Balg", count: null },
+        { waarde: "Overig", count: null },
+        { waarde: "Onbekend", count: null },
+      ]
+    },
+    {
+      name: "functieAfsluitmiddel", label: "Functie afsluitmiddel", model: "Watersysteem",
+      type: "AfsluitmiddelFunctie", eenheid: null,
+      values: [
+        { waarde: "Waterstroom reguleren", count: null },
+        { waarde: "Waterstroom afsluiten", count: null },
+        { waarde: "Waterstroom reguleren en afsluiten", count: null },
+        { waarde: "Onbekend", count: null },
+      ]
+    },
+    {
+      name: "typeMateriaal", label: "Type materiaal", model: "Watersysteem",
+      type: "KunstwerkTypeMateriaal", eenheid: null,
+      values: [
+        { waarde: "Aluminium", count: null },
+        { waarde: "Beton", count: null },
+        { waarde: "Gewapend beton", count: null },
+        { waarde: "Gietijzer", count: null },
+        { waarde: "Hout", count: null },
+        { waarde: "Kunststof", count: null },
+        { waarde: "Metselwerk", count: 1 },
+        { waarde: "Staal", count: null },
+        { waarde: "Roestvrij staal", count: null },
+        { waarde: "PVC", count: null },
+        { waarde: "Overig", count: null },
+        { waarde: "Onbekend", count: null },
+      ]
+    },
+    {
+      name: "typeRegelbaarheid", label: "Type regelbaarheid", model: "Watersysteem",
+      type: "RegelbaarheidType", eenheid: null,
+      values: [
+        { waarde: "Niet regelbaar (vast)", count: null },
+        { waarde: "Regelbaar – lokaal automatisch elektronisch", count: null },
+        { waarde: "Regelbaar – lokaal automatisch mechanisch", count: null },
+        { waarde: "Regelbaar – lokaal handmatig elektronisch", count: null },
+        { waarde: "Regelbaar – lokaal handmatig mechanisch", count: null },
+        { waarde: "Regelbaar – op afstand automatisch", count: null },
+        { waarde: "Overig", count: null },
+        { waarde: "Onbekend", count: null },
+      ]
+    },
+    {
+      name: "overlaatOnderlaat", label: "Overlaat of onderlaat", model: "Watersysteem",
+      type: "OverlaatOnderlaat", eenheid: null,
+      values: [
+        { waarde: "Overlaat", count: null },
+        { waarde: "Onderlaat", count: null },
+        { waarde: "Nvt", count: null },
+      ]
+    },
+    {
+      name: "indicatieWaterkerend", label: "Indicatie waterkerend", model: "Watersysteem",
+      type: "JaNee", eenheid: null,
+      values: [
+        { waarde: "Ja", count: null },
+        { waarde: "Nee", count: null },
+      ]
+    },
+    {
+      name: "hoogteAfsluitmiddel", label: "Hoogte afsluitmiddel", model: "Watersysteem",
+      type: "Double", eenheid: "m",
+      values: [
+        { waarde: "< 0.5m", count: null },
+        { waarde: "0.5 – 1.0m", count: null },
+        { waarde: "1.0 – 2.0m", count: null },
+        { waarde: "> 2.0m", count: null },
+      ]
+    },
+    {
+      name: "breedteAfsluitmiddel", label: "Breedte afsluitmiddel", model: "Watersysteem",
+      type: "Double", eenheid: "m",
+      values: [
+        { waarde: "< 0.5m", count: 1 },
+        { waarde: "0.5 – 1.0m", count: null },
+        { waarde: "1.0 – 2.0m", count: null },
+        { waarde: "> 2.0m", count: null },
+      ]
+    },
+    {
+      name: "minimaleHoogteBovenkant", label: "Min. hoogte bovenkant (overlaat)", model: "Watersysteem",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null },
+        { waarde: "0.0 – 1.0 m NAP", count: null },
+        { waarde: "> 1.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "maximaleHoogteBovenkant", label: "Max. hoogte bovenkant (overlaat)", model: "Watersysteem",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null },
+        { waarde: "0.0 – 1.0 m NAP", count: null },
+        { waarde: "> 1.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "maximaleHoogteOnderkant", label: "Max. hoogte onderkant (onderlaat)", model: "Watersysteem",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null },
+        { waarde: "0.0 – 1.0 m NAP", count: null },
+        { waarde: "> 1.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "stroomrichting", label: "Stroomrichting", model: "Watersysteem",
+      type: "PositiefNegatief", eenheid: null,
+      values: [
+        { waarde: "Positief", count: null },
+        { waarde: "Negatief", count: null },
+        { waarde: "Beide", count: null },
+      ]
+    },
+    // ── Relatie-attributen (referenties naar andere objecten) ─────────────
+    {
+      name: "coupureID", label: "Onderdeel van Coupure", model: "Keringen",
+      type: "GUID", eenheid: null,
+      values: [
+        { waarde: "Ja (gevuld)", count: null },
+        { waarde: "Nee (null)", count: null },
+      ]
+    },
+    {
+      name: "sluisID", label: "Onderdeel van Sluis", model: "Watersysteem",
+      type: "GUID", eenheid: null,
+      values: [
+        { waarde: "Ja (gevuld)", count: null },
+        { waarde: "Nee (null)", count: null },
+      ]
+    },
+    {
+      name: "gemaalID", label: "Onderdeel van Gemaal", model: "Watersysteem",
+      type: "GUID", eenheid: null,
+      values: [
+        { waarde: "Ja (gevuld)", count: null },
+        { waarde: "Nee (null)", count: null },
+      ]
+    },
+    {
+      name: "vispassageID", label: "Onderdeel van Vispassage", model: "Watersysteem",
+      type: "GUID", eenheid: null,
+      values: [
+        { waarde: "Ja (gevuld)", count: null },
+        { waarde: "Nee (null)", count: null },
+      ]
+    },
+  ],
+    // ── Watersysteem-attributen ──────────────────────────────────────────
+    {
+      name: "typeVispassage", label: "Type vispassage", model: "Watersysteem",
+      type: "VispassageType", eenheid: null,
+      values: [
+        { waarde: "Vislift", count: null },
+        { waarde: "Vistrap", count: 2 },
+        { waarde: "Aalpijp", count: null },
+        { waarde: "Vissluis", count: 6 },
+        { waarde: "Deniltrap", count: null },
+        { waarde: "Bekkentrap", count: null },
+        { waarde: "Lokstroomgemaal", count: null },
+        { waarde: "Overig", count: null },
+        { waarde: "Onbekend", count: 1 },
+      ]
+    },
+    {
+      name: "richting", label: "Richting (geografisch)", model: "Watersysteem",
+      type: "Single", eenheid: null,
+      values: [
+        { waarde: "Noord–Zuid", count: null },
+        { waarde: "Oost–West", count: null },
+        { waarde: "NW–ZO", count: null },
+        { waarde: "NO–ZW", count: null },
+      ]
+    },
+    // ── Keringen-attributen ──────────────────────────────────────────────
+    {
+      name: "categorieWaterkering", label: "Categorie waterkering", model: "Keringen",
+      type: "WaterkeringCategorie", eenheid: null,
+      values: [
+        { waarde: "Primair", count: null },
+        { waarde: "Regionaal", count: null },
+        { waarde: "Overig", count: null },
+      ]
+    },
+    {
+      name: "kerendeHoogte", label: "Kerende hoogte", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null },
+        { waarde: "0.0 – 1.0 m NAP", count: null },
+        { waarde: "> 1.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "drempelpeil", label: "Drempelpeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< -2.0 m NAP", count: null },
+        { waarde: "-2.0 – -1.0 m NAP", count: null },
+        { waarde: "-1.0 – 0.0 m NAP", count: null },
+        { waarde: "> 0.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "signaleringspeil", label: "Signaleringspeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "> 0.5 m NAP", count: null },
+      ]
+    },
+    {
+      name: "sluitpeil", label: "Sluitpeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "> 0.5 m NAP", count: null },
+      ]
+    },
+    {
+      name: "openkeerpeil", label: "Openkeerpeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "> 0.5 m NAP", count: null },
+      ]
+    },
+    {
+      name: "openingspeil", label: "Openingspeil", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 0.5 m NAP", count: null },
+        { waarde: "> 0.5 m NAP", count: null },
+      ]
+    },
+    {
+      name: "ontwerpBuitenWaterstand", label: "Ontwerp buitenwaterstand", model: "Keringen",
+      type: "Double", eenheid: "m NAP",
+      values: [
+        { waarde: "< 0.0 m NAP", count: null },
+        { waarde: "0.0 – 1.0 m NAP", count: null },
+        { waarde: "> 1.0 m NAP", count: null },
+      ]
+    },
+    {
+      name: "breedteOpening", label: "Breedte opening", model: "Keringen",
+      type: "Double", eenheid: "m",
+      values: [
+        { waarde: "< 0.5m", count: null },
+        { waarde: "0.5 – 1.0m", count: null },
+        { waarde: "1.0 – 2.0m", count: null },
+        { waarde: "> 2.0m", count: null },
+      ]
+    },
+    {
+      name: "indicatieWaterkerend", label: "Indicatie waterkerend", model: "Keringen",
+      type: "JaNee", eenheid: null,
+      values: [
+        { waarde: "Ja", count: null },
+        { waarde: "Nee", count: null },
+      ]
+    },
+  ],
     // ── Watersysteem-attributen ──────────────────────────────────────────
     {
       name: "doorvaartbreedte", label: "Doorvaartbreedte", model: "Watersysteem",
@@ -1501,9 +1792,41 @@ const DAMO_ATTRIBUTEN = {
       ]
     },
   ],
+  // Bron: DAMO 2.6 Objectenhandboek VasteDam — Het Waterschapshuis (2025)
+  vastedam: [
+    // ── Watersysteem-attributen (alle attributen VasteDam zijn Watersysteem) ─
+    {
+      name: "kerendeHoogte", label: "Kerende hoogte", model: "Watersysteem",
+      type: "Double", eenheid: "m",
+      values: [
+        { waarde: "< -1.0m", count: null },
+        { waarde: "-1.0 – 0.0m", count: null },
+        { waarde: "0.0 – 0.5m", count: null },
+        { waarde: "> 0.5m", count: null },
+      ]
+    },
+    {
+      name: "breedte", label: "Breedte (loodrecht op as)", model: "Watersysteem",
+      type: "Double", eenheid: "m",
+      values: [
+        { waarde: "< 1m", count: null },
+        { waarde: "1 – 3m", count: null },
+        { waarde: "3 – 6m", count: null },
+        { waarde: "> 6m", count: null },
+      ]
+    },
+    {
+      name: "richting", label: "Richting (geografisch)", model: "Watersysteem",
+      type: "Single", eenheid: null,
+      values: [
+        { waarde: "Noord–Zuid", count: null },
+        { waarde: "Oost–West", count: null },
+        { waarde: "NW–ZO", count: null },
+        { waarde: "NO–ZW", count: null },
+      ]
+    },
+  ],
 };
-
-// Standaard context- en RAMS-attributen (zelf gedefinieerd, niet uit DAMO)
 const DEFAULT_CONTEXT_ATTRS = [
   { name: "Omgevingstype", label: "Omgevingstype", values: [
     { waarde: "Boerenland", count: null },
@@ -1581,8 +1904,9 @@ const RAMS_TYPEN = ["Kritisch", "Normaal", "Laag"];
 // ─── Kleuren per type ─────────────────────────────────────────────────────────
 const TYPE_COLORS = {
   stuw: "#00c8ff", gemaal: "#ff4d6d", duiker: "#ffb347",
+  sifon: "#fb923c", hevel: "#34d399",
   brug: "#00ff9d", sluis: "#c084fc", afsluitmiddel: "#5a7a9a",
-  vispassage: "#f472b6", hevel: "#34d399",
+  vispassage: "#f472b6", vastedam: "#fbbf24",
 };
 
 // ─── Subcomponenten ───────────────────────────────────────────────────────────
@@ -1637,22 +1961,25 @@ const BRONHOUDERS = {
 
 // PDOK collecties per IMWA objecttype
 const PDOK_COLLECTIES = {
-  stuw:         "stuw",
-  gemaal:       "gemaal",
-  duiker:       "duikersifon",
-  brug:         "brug",
-  sluis:        "sluis",
-  afsluitmiddel:"afsluitmiddel",
-  vispassage:   "vispassage",
-  hevel:        "duikersifon",
+  stuw:          "stuw",
+  gemaal:        "gemaal",
+  duiker:        "duiker",
+  sifon:         "sifon",
+  hevel:         "hevel",
+  brug:          "brug",
+  sluis:         "sluis",
+  afsluitmiddel: "afsluitmiddel",
+  vispassage:    "vispassage",
+  vastedam:      "vastedam",
 };
 
 const PDOK_BASE = "https://api.pdok.nl/hwh/waterschappen-kunstwerken-imwa/ogc/v1/collections";
 
 function detectType(collectie) {
   const map = {
-    stuw: "stuw", gemaal: "gemaal", duikersifon: "duiker",
+    stuw: "stuw", gemaal: "gemaal", duiker: "duiker", sifon: "duiker", hevel: "duiker",
     brug: "brug", sluis: "sluis", afsluitmiddel: "afsluitmiddel",
+    vispassage: "vispassage", vastedam: "vastedam",
     vispassage: "vispassage",
   };
   return map[collectie] || collectie;
