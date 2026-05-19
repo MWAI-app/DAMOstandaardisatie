@@ -1622,34 +1622,38 @@ const BRONHOUDERS = {
   "W0636": { label: "De Stichtse Rijnlanden", center: [52.05, 5.10], zoom: 10 },
 };
 
-const PDOK_URL = "https://api.pdok.nl/hwh/waterschappen-kunstwerken-imwa/ogc/v1/collections/kunstwerk/items";
-
-const IMWA_TYPE_MAP = {
-  "stuw": "stuw", "gemaal": "gemaal", "duiker": "duiker",
-  "brug": "brug", "sluis": "sluis", "afsluitmiddel": "afsluitmiddel",
-  "vispassage": "vispassage", "hevel": "hevel", "aquaduct": "aquaduct",
-  "bodemval": "bodemval", "coupure": "coupure", "put": "put",
-  "sifon": "sifon", "vastedam": "vastedam", "voorde": "voorde",
-  "vuilvang": "vuilvang", "zandvang": "zandvang",
+// PDOK collecties per IMWA objecttype
+const PDOK_COLLECTIES = {
+  stuw:         "stuw",
+  gemaal:       "gemaal",
+  duiker:       "duikersifon",
+  brug:         "brug",
+  sluis:        "sluis",
+  afsluitmiddel:"afsluitmiddel",
+  vispassage:   "vispassage",
+  hevel:        "duikersifon",
 };
 
-function detectType(feature) {
-  const props = feature.properties || {};
-  const typeRaw = (props.typeKunstwerk || props.type || props.objecttype || "").toLowerCase();
-  for (const key of Object.keys(IMWA_TYPE_MAP)) {
-    if (typeRaw.includes(key)) return key;
-  }
-  return "overig";
+const PDOK_BASE = "https://api.pdok.nl/hwh/waterschappen-kunstwerken-imwa/ogc/v1/collections";
+
+function detectType(collectie) {
+  const map = {
+    stuw: "stuw", gemaal: "gemaal", duikersifon: "duiker",
+    brug: "brug", sluis: "sluis", afsluitmiddel: "afsluitmiddel",
+    vispassage: "vispassage",
+  };
+  return map[collectie] || collectie;
 }
 
-function LeafletKaart({ typeFilter, bronhouder, setBronhouder }) {
+function LeafletKaart({ typeFilter, setTypeFilter, bronhouder, setBronhouder }) {
   const mapRef = useRef(null);
   const leafletMap = useRef(null);
   const markersLayer = useRef(null);
-  const [status, setStatus] = useState("idle"); // idle | loading | success | error
+  const [status, setStatus] = useState("idle");
   const [stats, setStats] = useState({});
   const [selected, setSelected] = useState(null);
   const [totaal, setTotaal] = useState(0);
+  const [actieveCollectie, setActieveCollectie] = useState(null);
 
   const bron = BRONHOUDERS[bronhouder];
 
@@ -1657,74 +1661,64 @@ function LeafletKaart({ typeFilter, bronhouder, setBronhouder }) {
   useEffect(() => {
     if (leafletMap.current) return;
     leafletMap.current = L.map(mapRef.current, {
-      center: bron.center,
-      zoom: bron.zoom,
-      zoomControl: true,
+      center: bron.center, zoom: bron.zoom, zoomControl: true,
     });
-
-    // Donkere tile laag (CartoDB Dark Matter)
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
-      subdomains: "abcd",
-      maxZoom: 19,
+      subdomains: "abcd", maxZoom: 19,
     }).addTo(leafletMap.current);
-
     markersLayer.current = L.layerGroup().addTo(leafletMap.current);
   }, []);
 
-  // Haal PDOK data op
-  useEffect(() => {
-    if (!leafletMap.current) return;
-    fetchPDOK();
-  }, [bronhouder, typeFilter]);
-
-  async function fetchPDOK() {
+  async function fetchCollectie(collectieNaam) {
     setStatus("loading");
     setSelected(null);
+    setActieveCollectie(collectieNaam);
     markersLayer.current.clearLayers();
+    setStats({});
+    setTotaal(0);
 
-    const params = new URLSearchParams({
-      f: "json",
-      limit: 1000,
-      "filter-lang": "cql2-text",
-      filter: `bronhouder = '${bronhouder}'`,
-    });
-
-    // Als typefilter actief: voeg toe aan filter
-    const filterStr = typeFilter !== "all"
-      ? `bronhouder = '${bronhouder}' AND typeKunstwerk = '${typeFilter}'`
-      : `bronhouder = '${bronhouder}'`;
-
-    const url = `${PDOK_URL}?f=json&limit=2000&filter-lang=cql2-text&filter=${encodeURIComponent(filterStr)}`;
+    const type = detectType(collectieNaam);
+    const kleur = TYPE_COLORS[type] || "#888";
 
     try {
-      const resp = await fetch(url);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
-      const features = data.features || [];
+      // Ophalen met paginatie — max 5000 objecten
+      let allFeatures = [];
+      let url = `${PDOK_BASE}/${collectieNaam}/items?f=json&limit=1000`;
+      let paginas = 0;
 
-      // Centreer kaart op bronhouder
+      while (url && paginas < 5) {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        const features = data.features || [];
+        allFeatures = allFeatures.concat(features);
+        paginas++;
+
+        // Volgende pagina via next link
+        const nextLink = (data.links || []).find(l => l.rel === "next");
+        url = nextLink ? nextLink.href : null;
+      }
+
+      // Centreer kaart
       leafletMap.current.setView(bron.center, bron.zoom);
 
-      // Statistieken bijhouden
-      const statsTmp = {};
       let geldig = 0;
-
-      features.forEach(f => {
+      allFeatures.forEach(f => {
         if (!f.geometry) return;
-        const coords = f.geometry.coordinates;
+        const coords = f.geometry.type === "Point"
+          ? f.geometry.coordinates
+          : f.geometry.coordinates[0];
         if (!coords || coords.length < 2) return;
 
-        const type = detectType(f);
-        statsTmp[type] = (statsTmp[type] || 0) + 1;
+        const props = f.properties || {};
+        const naam = props.naam || props.lokaalid || props.code || f.id || "Onbekend";
+        const lat = coords[1], lon = coords[0];
+        if (lat < 50 || lat > 54 || lon < 3 || lon > 8) return; // buiten NL overslaan
+
         geldig++;
 
-        const kleur = TYPE_COLORS[type] || "#888";
-        const props = f.properties || {};
-        const naam = props.naam || props.name || props.identificatie || "Onbekend";
-
-        // Maak marker
-        const marker = L.circleMarker([coords[1], coords[0]], {
+        const marker = L.circleMarker([lat, lon], {
           radius: 6,
           fillColor: kleur,
           color: "#0b1220",
@@ -1733,24 +1727,26 @@ function LeafletKaart({ typeFilter, bronhouder, setBronhouder }) {
           fillOpacity: 0.85,
         });
 
-        marker.on("click", () => {
-          setSelected({ naam, type, props, coords });
-        });
-
-        marker.bindTooltip(`
-          <div style="font-family:monospace;font-size:11px;background:#111c2e;color:#d0e4f7;border:1px solid #1e3a5f;padding:6px 10px">
-            <b style="color:${kleur}">${naam}</b><br/>
-            Type: ${type}<br/>
-            Bronhouder: ${bronhouder}
-          </div>
-        `, { className: "leaflet-tooltip-damo", sticky: true });
-
+        marker.on("click", () => setSelected({ naam, type, props, coords: [lon, lat] }));
+        marker.bindTooltip(
+          `<div style="font-family:monospace;font-size:11px;background:#111c2e;color:#d0e4f7;border:1px solid #1e3a5f;padding:6px 10px">
+            <b style="color:${kleur}">${naam}</b><br/>Type: ${type}
+          </div>`,
+          { className: "leaflet-tooltip-damo", sticky: true }
+        );
         markersLayer.current.addLayer(marker);
       });
 
-      setStats(statsTmp);
+      setStats({ [type]: geldig });
       setTotaal(geldig);
       setStatus("success");
+
+      // Zoom naar markers als er zijn
+      if (geldig > 0) {
+        try { leafletMap.current.fitBounds(markersLayer.current.getBounds(), { padding: [40, 40] }); }
+        catch(e) {}
+      }
+
     } catch (err) {
       console.error("PDOK fout:", err);
       setStatus("error");
@@ -1792,7 +1788,7 @@ function LeafletKaart({ typeFilter, bronhouder, setBronhouder }) {
           <div className="filter-group">
             <div className="filter-label">BRONHOUDER (WATERSCHAP)</div>
             <select className="filter-select" value={bronhouder}
-              onChange={e => { setBronhouder(e.target.value); }}>
+              onChange={e => { setBronhouder(e.target.value); markersLayer.current && markersLayer.current.clearLayers(); setTotaal(0); setStats({}); setStatus("idle"); }}>
               {Object.entries(BRONHOUDERS).map(([code, info]) => (
                 <option key={code} value={code}>{code} – {info.label.split(" (")[0]}</option>
               ))}
@@ -1800,32 +1796,49 @@ function LeafletKaart({ typeFilter, bronhouder, setBronhouder }) {
           </div>
 
           <div className="filter-group" style={{ marginTop: 12 }}>
-            <div className="filter-label">OBJECTTYPE (IMWA)</div>
-            <select className="filter-select" value={typeFilter}
-              onChange={e => { /* handled by parent */ }}>
-              <option value="all">Alle typen</option>
-              {OBJECTTYPEN.map(o => (
-                <option key={o.id} value={o.id}>{o.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <div style={{ marginTop: 16 }}>
-            <div className="sidebar-title">// Legenda</div>
-            {Object.entries(stats).sort((a,b) => b[1]-a[1]).map(([type, count]) => (
-              <div key={type} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                <div style={{ width: 10, height: 10, borderRadius: "50%",
-                  background: TYPE_COLORS[type] || "#888", flexShrink: 0 }} />
-                <span style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--muted)" }}>{type}</span>
-                <span style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--accent)", marginLeft: "auto" }}>{count}</span>
-              </div>
+            <div className="filter-label">OBJECTTYPE LADEN VAN PDOK</div>
+            {Object.entries(PDOK_COLLECTIES).map(([type, collectie]) => (
+              <button key={type} onClick={() => fetchCollectie(collectie)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  width: "100%", background: actieveCollectie === collectie ? "rgba(0,200,255,0.1)" : "none",
+                  border: actieveCollectie === collectie ? "1px solid var(--accent)" : "1px solid var(--border)",
+                  color: actieveCollectie === collectie ? "var(--accent)" : "var(--muted)",
+                  padding: "6px 10px", cursor: "pointer", marginBottom: 4,
+                  fontFamily: "DM Mono", fontSize: 10, letterSpacing: 1, textAlign: "left",
+                }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: TYPE_COLORS[type] || "#888", flexShrink: 0 }} />
+                {type.toUpperCase()}
+                {actieveCollectie === collectie && totaal > 0 && (
+                  <span style={{ marginLeft: "auto", color: "var(--accent)" }}>{totaal}</span>
+                )}
+              </button>
             ))}
           </div>
 
-          {/* Status indicator */}
+          {/* Legenda */}
+          {Object.entries(stats).length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <div className="sidebar-title">// Geladen</div>
+              {Object.entries(stats).map(([type, count]) => (
+                <div key={type} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: TYPE_COLORS[type] || "#888", flexShrink: 0 }} />
+                  <span style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--muted)" }}>{type}</span>
+                  <span style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--accent)", marginLeft: "auto" }}>{count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Status */}
           <div style={{ marginTop: "auto", paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+            {status === "idle" && (
+              <div style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--muted)" }}>
+                ← Kies een objecttype om te laden
+              </div>
+            )}
             {status === "loading" && (
-              <div className="loading"><div className="spinner" />Data ophalen van PDOK...</div>
+              <div className="loading"><div className="spinner" />PDOK data ophalen...</div>
             )}
             {status === "success" && (
               <div style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--accent2)" }}>
@@ -1834,12 +1847,12 @@ function LeafletKaart({ typeFilter, bronhouder, setBronhouder }) {
             )}
             {status === "error" && (
               <div style={{ fontFamily: "DM Mono", fontSize: 10, color: "var(--danger)" }}>
-                ✗ PDOK niet bereikbaar
+                ✗ PDOK fout — controleer console
               </div>
             )}
-            <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", marginTop: 4 }}>
+            <div style={{ fontFamily: "DM Mono", fontSize: 9, color: "var(--muted)", marginTop: 6 }}>
               Kaart: CartoDB Dark Matter<br/>
-              Data: PDOK OGC API Features
+              Data: PDOK OGC API Features v1
             </div>
           </div>
         </div>
@@ -1847,8 +1860,6 @@ function LeafletKaart({ typeFilter, bronhouder, setBronhouder }) {
         {/* Leaflet kaart */}
         <div style={{ position: "relative" }}>
           <div ref={mapRef} style={{ height: 520, border: "1px solid var(--border)" }} />
-
-          {/* PDOK bronvermelding overlay */}
           <div style={{
             position: "absolute", bottom: 8, left: 8, zIndex: 1000,
             background: "rgba(11,18,32,0.85)", border: "1px solid var(--border)",
@@ -1859,7 +1870,7 @@ function LeafletKaart({ typeFilter, bronhouder, setBronhouder }) {
         </div>
       </div>
 
-      {/* Detail panel bij klik */}
+      {/* Detail panel */}
       {selected && (
         <div className="detail-panel">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1874,14 +1885,12 @@ function LeafletKaart({ typeFilter, bronhouder, setBronhouder }) {
           </div>
           <div className="detail-grid" style={{ marginTop: 12 }}>
             <div className="detail-item">
-              <div className="detail-key">Naam</div>
+              <div className="detail-key">Naam / ID</div>
               <div className="detail-val">{selected.naam}</div>
             </div>
             <div className="detail-item">
               <div className="detail-key">Type (IMWA)</div>
-              <div className="detail-val" style={{ color: TYPE_COLORS[selected.type] || "#888" }}>
-                {selected.type}
-              </div>
+              <div className="detail-val" style={{ color: TYPE_COLORS[selected.type] || "#888" }}>{selected.type}</div>
             </div>
             <div className="detail-item">
               <div className="detail-key">Bronhouder</div>
@@ -1896,7 +1905,7 @@ function LeafletKaart({ typeFilter, bronhouder, setBronhouder }) {
             <div className="detail-item">
               <div className="detail-key">Identificatie</div>
               <div className="detail-val" style={{ fontFamily: "DM Mono", fontSize: 10, wordBreak: "break-all" }}>
-                {selected.props.identificatie || selected.props.id || "—"}
+                {selected.props.lokaalid || selected.props.identificatie || selected.props.id || "—"}
               </div>
             </div>
             <div className="detail-item">
@@ -1915,6 +1924,7 @@ function KaartTab({ typeFilter, setTypeFilter }) {
   return (
     <LeafletKaart
       typeFilter={typeFilter}
+      setTypeFilter={setTypeFilter}
       bronhouder={bronhouder}
       setBronhouder={setBronhouder}
     />
