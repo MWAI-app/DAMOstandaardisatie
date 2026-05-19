@@ -1920,35 +1920,6 @@ function KaartTab({ typeFilter, setTypeFilter }) {
     />
   );
 }
-            <div className="detail-item">
-              <div className="detail-key">Type (IMWA)</div>
-              <div className="detail-val" style={{ color: TYPE_COLORS[selected.type] }}>{selected.type}</div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-key">Bulk</div>
-              <div className="detail-val" style={{ color: selected.bulk ? "var(--bulk)" : "var(--nobulk)" }}>
-                {selected.bulk ? "Bulk object" : "Niet bulk"}
-              </div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-key">Context-as</div>
-              <div className="detail-val"><span className="tag context">{selected.context}</span></div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-key">RAMS-as</div>
-              <div className="detail-val"><span className="tag rams">{selected.rams}</span></div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-key">Standaard</div>
-              <div className="detail-val"><span className="tag func">DAMO 2.3 · IMWA</span></div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function DecompositieTab() {
   const [selected, setSelected] = useState("stuw");
   // Per objecttype: welke attributen zijn clusterattributen (set van attr.name)
