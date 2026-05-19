@@ -82,11 +82,19 @@
   <button class="type-btn" id="btn-brug"          onclick="fetchType('brug')">● BRUG</button>
   <button class="type-btn" id="btn-stuw"          onclick="fetchType('stuw')">● STUW</button>
   <button class="type-btn" id="btn-gemaal"        onclick="fetchType('gemaal')">● GEMAAL</button>
-  <button class="type-btn" id="btn-duikersifon"   onclick="fetchType('duikersifon')">● DUIKER/SIFON</button>
+  <button class="type-btn" id="btn-duiker"        onclick="fetchType('duiker')">● DUIKER</button>
+  <button class="type-btn" id="btn-sifon"         onclick="fetchType('sifon')">● SIFON</button>
+  <button class="type-btn" id="btn-hevel"         onclick="fetchType('hevel')">● HEVEL</button>
   <button class="type-btn" id="btn-sluis"         onclick="fetchType('sluis')">● SLUIS</button>
   <button class="type-btn" id="btn-afsluitmiddel" onclick="fetchType('afsluitmiddel')">● AFSLUITMIDDEL</button>
   <button class="type-btn" id="btn-vispassage"    onclick="fetchType('vispassage')">● VISPASSAGE</button>
-  <button class="type-btn" id="btn-hevel"         onclick="fetchType('hevel')">● HEVEL</button>
+  <button class="type-btn" id="btn-aquaduct"      onclick="fetchType('aquaduct')">● AQUADUCT</button>
+  <button class="type-btn" id="btn-bodemval"      onclick="fetchType('bodemval')">● BODEMVAL</button>
+  <button class="type-btn" id="btn-coupure"       onclick="fetchType('coupure')">● COUPURE</button>
+  <button class="type-btn" id="btn-put"           onclick="fetchType('put')">● PUT</button>
+  <button class="type-btn" id="btn-vastedam"      onclick="fetchType('vastedam')">● VASTE DAM</button>
+  <button class="type-btn" id="btn-vuilvang"      onclick="fetchType('vuilvang')">● VUILVANG</button>
+  <button class="type-btn" id="btn-zandvang"      onclick="fetchType('zandvang')">● ZANDVANG</button>
 </div>
 <div style="margin-top:12px">
   <button id="runAll" onclick="runAll()">▶ DRAAI ALLE KUNSTWERKEN</button>
@@ -111,11 +119,19 @@ const TYPES = [
   { id:"brug",          label:"Brug",          color:"#00ff9d" },
   { id:"stuw",          label:"Stuw",          color:"#00c8ff" },
   { id:"gemaal",        label:"Gemaal",        color:"#ff4d6d" },
-  { id:"duikersifon",   label:"Duiker/Sifon",  color:"#ffb347" },
+  { id:"duiker",        label:"Duiker",        color:"#ffb347" },
+  { id:"sifon",         label:"Sifon",         color:"#fb923c" },
+  { id:"hevel",         label:"Hevel",         color:"#34d399" },
   { id:"sluis",         label:"Sluis",         color:"#c084fc" },
   { id:"afsluitmiddel", label:"Afsluitmiddel", color:"#5a7a9a" },
   { id:"vispassage",    label:"Vispassage",    color:"#f472b6" },
-  { id:"hevel",         label:"Hevel",         color:"#34d399" },
+  { id:"aquaduct",      label:"Aquaduct",      color:"#60a5fa" },
+  { id:"bodemval",      label:"Bodemval",      color:"#a78bfa" },
+  { id:"coupure",       label:"Coupure",       color:"#4ade80" },
+  { id:"put",           label:"Put",           color:"#94a3b8" },
+  { id:"vastedam",      label:"Vaste Dam",     color:"#fbbf24" },
+  { id:"vuilvang",      label:"Vuilvang",      color:"#6ee7b7" },
+  { id:"zandvang",      label:"Zandvang",      color:"#fde68a" },
 ];
 
 const store = {};
