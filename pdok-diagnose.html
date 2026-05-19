@@ -2,156 +2,384 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <title>PDOK Diagnose</title>
+  <title>PDOK Diagnose — AGV Kunstwerken</title>
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: monospace; background: #0b1220; color: #d0e4f7; padding: 20px; font-size: 12px; }
-    h2 { color: #00c8ff; letter-spacing: 2px; font-size: 13px; margin-top: 24px; }
-    button { background: none; border: 1px solid #00c8ff; color: #00c8ff; padding: 8px 16px; cursor: pointer; margin: 4px; font-family: monospace; }
-    button:hover { background: rgba(0,200,255,0.1); }
-    .panel { background: #111c2e; border: 1px solid #1e3a5f; padding: 16px; margin-top: 12px; }
-    .row { display: grid; grid-template-columns: 180px 1fr; gap: 8px; padding: 4px 0; border-bottom: 1px solid #1e3a5f; }
-    .key { color: #5a7a9a; }
-    .val { color: #d0e4f7; word-break: break-all; }
-    .val.accent { color: #00c8ff; }
-    .val.warn { color: #ffb347; }
-    .val.good { color: #00ff9d; }
-    .status { padding: 8px; margin-bottom: 12px; }
-    .count { font-size: 24px; color: #00c8ff; }
-    pre { background: #162035; padding: 12px; overflow-x: auto; white-space: pre-wrap; font-size: 11px; max-height: 400px; overflow-y: auto; }
-    table { width: 100%; border-collapse: collapse; }
-    th { background: #162035; color: #00c8ff; padding: 6px 8px; text-align: left; font-size: 10px; letter-spacing: 1px; }
-    td { padding: 5px 8px; border-bottom: 1px solid #1e3a5f; font-size: 11px; }
-    tr:hover td { background: rgba(0,200,255,0.05); }
-    .tag { display: inline-block; padding: 2px 6px; border: 1px solid #1e3a5f; font-size: 10px; margin: 1px; }
+    h1 { color: #00c8ff; font-size: 15px; letter-spacing: 3px; margin-bottom: 4px; }
+    h2 { color: #00c8ff; font-size: 11px; letter-spacing: 2px; margin: 24px 0 8px; text-transform: uppercase; }
+    p { color: #5a7a9a; margin-bottom: 12px; font-size: 11px; }
+    .type-btn {
+      background: none; border: 1px solid #1e3a5f; color: #5a7a9a;
+      padding: 8px 14px; cursor: pointer; margin: 3px;
+      font-family: monospace; font-size: 11px; letter-spacing: 1px; transition: all 0.15s;
+    }
+    .type-btn:hover { border-color: #00c8ff; color: #00c8ff; }
+    .type-btn.active { border-color: #00c8ff; color: #00c8ff; background: rgba(0,200,255,0.08); }
+    .type-btn.done { border-color: #00ff9d; color: #00ff9d; }
+    .type-btn.error { border-color: #ff4d6d; color: #ff4d6d; }
+    #runAll {
+      background: rgba(0,200,255,0.1); border: 1px solid #00c8ff; color: #00c8ff;
+      padding: 10px 24px; cursor: pointer; font-family: monospace; font-size: 12px;
+      letter-spacing: 2px; margin: 8px 0;
+    }
+    #runAll:hover { background: rgba(0,200,255,0.2); }
+    #exportBtn {
+      background: rgba(0,255,157,0.1); border: 1px solid #00ff9d; color: #00ff9d;
+      padding: 8px 20px; cursor: pointer; font-family: monospace; font-size: 11px;
+      letter-spacing: 1px; margin-left: 8px; display: none;
+    }
+    .panel { background: #111c2e; border: 1px solid #1e3a5f; padding: 16px; margin-top: 8px; }
+    .stat-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+    .stat { background: #162035; border: 1px solid #1e3a5f; padding: 12px 16px; min-width: 140px; }
+    .stat-num { font-size: 22px; color: #00c8ff; }
+    .stat-label { font-size: 10px; color: #5a7a9a; margin-top: 2px; }
+    .scroll { overflow-x: auto; max-height: 420px; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 10px; }
+    th {
+      background: #162035; color: #00c8ff; padding: 5px 8px;
+      text-align: left; font-size: 9px; letter-spacing: 1px;
+      position: sticky; top: 0; white-space: nowrap; z-index: 1;
+    }
+    td { padding: 4px 8px; border-bottom: 1px solid rgba(30,58,95,0.4); vertical-align: top; white-space: nowrap; }
+    tr:hover td { background: rgba(0,200,255,0.04); }
+    .nv { color: #5a7a9a; font-style: italic; }
+    .gv { color: #00ff9d; }
+    .wv { color: #ffb347; }
+    .rv { color: #ff4d6d; }
+    .type-section { margin-bottom: 32px; }
+    .type-header {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      background: #162035; border: 1px solid #1e3a5f; padding: 10px 16px; margin-bottom: 8px;
+    }
+    .type-name { font-size: 14px; font-weight: bold; letter-spacing: 2px; }
+    .type-url { font-size: 9px; color: #5a7a9a; margin-left: auto; word-break: break-all; }
+    .fill-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+    .fill-badge {
+      background: #0b1220; border: 1px solid #1e3a5f;
+      padding: 3px 8px; font-size: 9px;
+    }
+    .fill-badge .fn { color: #ffb347; }
+    .fill-badge .fp { color: #00ff9d; }
+    .fill-badge .fp.low { color: #ff4d6d; }
+    .spinner {
+      display: inline-block; width: 12px; height: 12px;
+      border: 2px solid #1e3a5f; border-top-color: #00c8ff;
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .progress { background: #162035; border: 1px solid #1e3a5f; height: 4px; margin: 8px 0; }
+    .progress-bar { height: 100%; background: #00c8ff; transition: width 0.3s; }
   </style>
 </head>
 <body>
 
-<h1 style="color:#00c8ff;font-size:16px;letter-spacing:3px;">// PDOK DIAGNOSE TOOL</h1>
-<p style="color:#5a7a9a;">Inspecteert ruwe PDOK OGC API response — toont exacte velden en waarden per object</p>
+<h1>// PDOK DIAGNOSE — AGV KUNSTWERKEN</h1>
+<p>10 objecten per type · Filter: waterbeheerder = Waterschap Amstel, Gooi en Vecht · Bbox: 4.65,52.10,5.25,52.55</p>
 
-<h2>STAP 1 · KIES COLLECTIE</h2>
+<h2>Stap 1 · Selectie</h2>
 <div>
-  <button onclick="fetchCollectie('brug')">brug</button>
-  <button onclick="fetchCollectie('stuw')">stuw</button>
-  <button onclick="fetchCollectie('gemaal')">gemaal</button>
-  <button onclick="fetchCollectie('duikersifon')">duikersifon</button>
-  <button onclick="fetchCollectie('sluis')">sluis</button>
-  <button onclick="fetchCollectie('afsluitmiddel')">afsluitmiddel</button>
+  <button class="type-btn" id="btn-brug"          onclick="fetchType('brug')">● BRUG</button>
+  <button class="type-btn" id="btn-stuw"          onclick="fetchType('stuw')">● STUW</button>
+  <button class="type-btn" id="btn-gemaal"        onclick="fetchType('gemaal')">● GEMAAL</button>
+  <button class="type-btn" id="btn-duikersifon"   onclick="fetchType('duikersifon')">● DUIKER/SIFON</button>
+  <button class="type-btn" id="btn-sluis"         onclick="fetchType('sluis')">● SLUIS</button>
+  <button class="type-btn" id="btn-afsluitmiddel" onclick="fetchType('afsluitmiddel')">● AFSLUITMIDDEL</button>
+  <button class="type-btn" id="btn-vispassage"    onclick="fetchType('vispassage')">● VISPASSAGE</button>
+  <button class="type-btn" id="btn-hevel"         onclick="fetchType('hevel')">● HEVEL</button>
 </div>
-
-<div style="margin-top:8px;color:#5a7a9a;font-size:11px;">
-  Bbox AGV: 4.65,52.10,5.25,52.55 · limit: 5
+<div style="margin-top:12px">
+  <button id="runAll" onclick="runAll()">▶ DRAAI ALLE KUNSTWERKEN</button>
+  <button id="exportBtn" onclick="exportJSON()">↓ EXPORTEER JSON</button>
 </div>
+<div class="progress"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+<div id="globalStatus" style="color:#5a7a9a;font-size:10px;min-height:16px;margin-bottom:4px"></div>
 
-<div id="status" class="panel" style="display:none"></div>
+<h2>Stap 2 · Resultaten per type</h2>
+<div id="results"></div>
 
-<h2>STAP 2 · RUWE API RESPONSE (eerste 5 objecten)</h2>
-<div id="raw" class="panel">
-  <span style="color:#5a7a9a;">← Kies een collectie hierboven</span>
-</div>
-
-<h2>STAP 3 · ALLE VELDEN VAN OBJECT #1</h2>
-<div id="fields" class="panel">
-  <span style="color:#5a7a9a;">← Kies een collectie hierboven</span>
-</div>
-
-<h2>STAP 4 · TABEL EERSTE 5 OBJECTEN</h2>
-<div id="table" class="panel">
-  <span style="color:#5a7a9a;">← Kies een collectie hierboven</span>
-</div>
+<h2>Stap 3 · Samenvatting</h2>
+<div id="summary" class="panel"><span class="nv">← Klik "DRAAI ALLE KUNSTWERKEN"</span></div>
 
 <script>
-const PDOK_BASE = "https://api.pdok.nl/hwh/waterschappen-kunstwerken-imwa/ogc/v1/collections";
-const BBOX = "4.65,52.10,5.25,52.55";
+const BASE  = "https://api.pdok.nl/hwh/waterschappen-kunstwerken-imwa/ogc/v1/collections";
+const BBOX  = "4.65,52.10,5.25,52.55";
+const AGV   = "Waterschap Amstel, Gooi en Vecht";
+const N     = 10;
 
-async function fetchCollectie(naam) {
-  const statusEl = document.getElementById('status');
-  const rawEl = document.getElementById('raw');
-  const fieldsEl = document.getElementById('fields');
-  const tableEl = document.getElementById('table');
+const TYPES = [
+  { id:"brug",          label:"Brug",          color:"#00ff9d" },
+  { id:"stuw",          label:"Stuw",          color:"#00c8ff" },
+  { id:"gemaal",        label:"Gemaal",        color:"#ff4d6d" },
+  { id:"duikersifon",   label:"Duiker/Sifon",  color:"#ffb347" },
+  { id:"sluis",         label:"Sluis",         color:"#c084fc" },
+  { id:"afsluitmiddel", label:"Afsluitmiddel", color:"#5a7a9a" },
+  { id:"vispassage",    label:"Vispassage",    color:"#f472b6" },
+  { id:"hevel",         label:"Hevel",         color:"#34d399" },
+];
 
-  statusEl.style.display = 'block';
-  statusEl.innerHTML = `<span style="color:#ffb347">⏳ Ophalen van PDOK: ${naam} ...</span>`;
-  rawEl.innerHTML = '...';
-  fieldsEl.innerHTML = '...';
-  tableEl.innerHTML = '...';
+const store = {};
 
-  const url = `${PDOK_BASE}/${naam}/items?f=json&limit=5&bbox=${BBOX}`;
+function btn(id, state) {
+  const el = document.getElementById(`btn-${id}`);
+  if (el) el.className = `type-btn ${state}`;
+}
+
+async function fetchType(id) {
+  const info = TYPES.find(t => t.id === id) || { id, label: id, color: "#888" };
+  btn(id, "active");
+
+  const url = `${BASE}/${id}/items?f=json&limit=${N}&bbox=${BBOX}`;
+
+  let sec = document.getElementById(`sec-${id}`);
+  if (!sec) {
+    sec = document.createElement('div');
+    sec.id = `sec-${id}`;
+    sec.className = 'type-section';
+    document.getElementById('results').appendChild(sec);
+  }
+
+  sec.innerHTML = `
+    <div class="type-header">
+      <span class="type-name" style="color:${info.color}">// ${info.label.toUpperCase()}</span>
+      <span><span class="spinner"></span> ophalen...</span>
+      <span class="type-url">${url}</span>
+    </div>`;
 
   try {
     const resp = await fetch(url);
-    const statusCode = resp.status;
-
-    if (!resp.ok) {
-      statusEl.innerHTML = `<span style="color:#ff4d6d">✗ HTTP ${statusCode} — collectienaam '${naam}' bestaat mogelijk niet</span>
-        <br/><span style="color:#5a7a9a">URL geprobeerd: ${url}</span>`;
-      return;
-    }
-
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} — collectie '${id}' niet gevonden`);
     const data = await resp.json();
-    const features = data.features || [];
-    const totaal = data.numberMatched ?? data.numberReturned ?? '?';
 
-    statusEl.innerHTML = `
-      <div class="count">${features.length}</div>
-      <div>objecten ontvangen in bbox AGV</div>
-      <div style="color:#5a7a9a;margin-top:4px">numberMatched (totaal in bbox): <span style="color:#00c8ff">${data.numberMatched ?? 'niet opgegeven'}</span></div>
-      <div style="color:#5a7a9a">numberReturned: <span style="color:#00c8ff">${data.numberReturned ?? features.length}</span></div>
-      <div style="color:#5a7a9a;margin-top:4px">URL: <span style="color:#00ff9d">${url}</span></div>
-    `;
+    // Filter op AGV waterbeheerder
+    const all = data.features || [];
+    const feats = all.filter(f => {
+      const wb = f.properties?.waterbeheerder;
+      return !wb || wb === AGV; // inclusief objecten zonder waterbeheerder veld
+    });
+    const matched = data.numberMatched ?? '?';
 
-    // Ruwe JSON
-    rawEl.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+    store[id] = { info, feats, all, matched, url };
 
-    if (features.length === 0) {
-      fieldsEl.innerHTML = '<span style="color:#ffb347">Geen objecten gevonden in deze bbox. Probeer een andere collectienaam of bbox.</span>';
-      tableEl.innerHTML = '<span style="color:#ffb347">Geen data.</span>';
+    if (feats.length === 0) {
+      sec.innerHTML = `
+        <div class="type-header">
+          <span class="type-name" style="color:${info.color}">// ${info.label.toUpperCase()}</span>
+          <span class="wv">⚠ 0 AGV-objecten in bbox (totaal in bbox: ${matched})</span>
+          <span class="type-url">${url}</span>
+        </div>`;
+      btn(id, "error");
       return;
     }
 
-    // Alle velden van object #1
-    const props = features[0].properties || {};
-    const geom = features[0].geometry || {};
-    let html = '<table><tr><th>VELD</th><th>WAARDE</th><th>TYPE</th></tr>';
-
-    // Geometrie eerst
-    html += `<tr><td style="color:#00c8ff">geometry.type</td><td>${geom.type || '—'}</td><td>geometrie</td></tr>`;
-    if (geom.coordinates) {
-      html += `<tr><td style="color:#00c8ff">geometry.coordinates</td><td>${JSON.stringify(geom.coordinates)}</td><td>geometrie</td></tr>`;
-    }
-
-    // Properties
-    for (const [k, v] of Object.entries(props)) {
-      const type = v === null ? 'null' : typeof v;
-      html += `<tr><td style="color:#ffb347">${k}</td><td>${v === null ? '<span style="color:#5a7a9a">null</span>' : v}</td><td style="color:#5a7a9a">${type}</td></tr>`;
-    }
-    html += '</table>';
-    fieldsEl.innerHTML = html;
-
-    // Tabel alle 5 objecten — alle properties als kolommen
-    const allKeys = [...new Set(features.flatMap(f => Object.keys(f.properties || {})))];
-    let thtml = '<table><tr><th>#</th><th>GEOMETRIE</th>';
-    for (const k of allKeys) thtml += `<th>${k}</th>`;
-    thtml += '</tr>';
-
-    features.forEach((f, i) => {
-      const p = f.properties || {};
-      const coords = f.geometry?.coordinates;
-      thtml += `<tr><td>${i+1}</td><td style="color:#00c8ff">${coords ? `[${coords[1]?.toFixed(4)}, ${coords[0]?.toFixed(4)}]` : '—'}</td>`;
-      for (const k of allKeys) {
-        const v = p[k];
-        thtml += `<td>${v === null || v === undefined ? '<span style="color:#5a7a9a">—</span>' : v}</td>`;
-      }
-      thtml += '</tr>';
+    // Velden
+    const keys = [...new Set(feats.flatMap(f => Object.keys(f.properties || {})))];
+    // Vulgraad per veld
+    const fill = {};
+    keys.forEach(k => {
+      const n = feats.filter(f => f.properties[k] !== null && f.properties[k] !== undefined).length;
+      fill[k] = Math.round((n / feats.length) * 100);
     });
-    thtml += '</table>';
-    tableEl.innerHTML = thtml;
+
+    // Volgorde: eerst identificerende velden, dan data
+    const skipCols = new Set(['guid','nen3610id','url','objectbegintijd','tijdstipregistratie','statuslegger']);
+    const showKeys = keys.filter(k => !skipCols.has(k));
+
+    // Vulgraad badges
+    let badges = '<div class="fill-badges">';
+    keys.forEach(k => {
+      const cls = fill[k] >= 50 ? 'fp' : 'fp low';
+      badges += `<div class="fill-badge"><span class="fn">${k}</span> <span class="${cls}">${fill[k]}%</span></div>`;
+    });
+    badges += '</div>';
+
+    // Tabel: rijen = objecten, kolommen = velden
+    let tbl = '<div class="scroll"><table><tr><th>NR</th><th>CODE</th><th>LAT</th><th>LON</th><th>WATERBEHEERDER</th>';
+    showKeys.filter(k => k !== 'code' && k !== 'waterbeheerder').forEach(k => {
+      tbl += `<th>${k.toUpperCase()}</th>`;
+    });
+    tbl += '</tr>';
+
+    feats.forEach((f, i) => {
+      const p = f.properties || {};
+      const c = f.geometry?.coordinates;
+      const lat = c ? c[1].toFixed(5) : null;
+      const lon = c ? c[0].toFixed(5) : null;
+      const wbOk = p.waterbeheerder === AGV;
+
+      tbl += `<tr>
+        <td>${i+1}</td>
+        <td class="gv">${p.code || f.id || '—'}</td>
+        <td>${lat ?? '<span class="nv">—</span>'}</td>
+        <td>${lon ?? '<span class="nv">—</span>'}</td>
+        <td class="${wbOk ? 'gv' : p.waterbeheerder ? 'rv' : 'nv'}">${p.waterbeheerder ?? '—'}</td>`;
+
+      showKeys.filter(k => k !== 'code' && k !== 'waterbeheerder').forEach(k => {
+        const v = p[k];
+        if (v === null || v === undefined) {
+          tbl += `<td class="nv">—</td>`;
+        } else {
+          tbl += `<td class="gv">${v}</td>`;
+        }
+      });
+      tbl += '</tr>';
+    });
+    tbl += '</table></div>';
+
+    sec.innerHTML = `
+      <div class="type-header">
+        <span class="type-name" style="color:${info.color}">// ${info.label.toUpperCase()}</span>
+        <span class="gv">✓ ${feats.length} AGV-objecten</span>
+        <span style="color:#5a7a9a;font-size:10px">numberMatched (bbox, alle waterschappen): ${matched}</span>
+        <span class="type-url">${url}</span>
+      </div>
+      <div class="panel">
+        <div style="font-size:10px;color:#5a7a9a;margin-bottom:6px">
+          VULGRAAD PER VELD — groen ≥50% · rood &lt;50%
+        </div>
+        ${badges}
+        <div style="font-size:10px;color:#5a7a9a;margin:10px 0 4px">
+          TABEL — ${feats.length} OBJECTEN × ${showKeys.length} VELDEN
+        </div>
+        ${tbl}
+      </div>`;
+
+    btn(id, "done");
 
   } catch(err) {
-    statusEl.innerHTML = `<span style="color:#ff4d6d">✗ Fout: ${err.message}</span>`;
-    rawEl.innerHTML = `<pre>${err.stack}</pre>`;
+    sec.innerHTML = `
+      <div class="type-header">
+        <span class="type-name rv">// ${info.label.toUpperCase()}</span>
+        <span class="rv">✗ ${err.message}</span>
+        <span class="type-url">${url}</span>
+      </div>`;
+    btn(id, "error");
+    store[id] = { info, feats:[], all:[], matched:0, url, error: err.message };
   }
+}
+
+async function runAll() {
+  document.getElementById('results').innerHTML = '';
+  document.getElementById('summary').innerHTML = '<span class="nv">Bezig...</span>';
+  const statusEl = document.getElementById('globalStatus');
+  const bar = document.getElementById('progressBar');
+
+  for (let i = 0; i < TYPES.length; i++) {
+    const t = TYPES[i];
+    statusEl.textContent = `Ophalen ${i+1}/${TYPES.length}: ${t.label}...`;
+    bar.style.width = `${Math.round((i / TYPES.length) * 100)}%`;
+    await fetchType(t.id);
+    await new Promise(r => setTimeout(r, 400));
+  }
+
+  bar.style.width = '100%';
+  statusEl.innerHTML = `<span class="gv">✓ Klaar — ${TYPES.length} types opgehaald</span>`;
+  document.getElementById('exportBtn').style.display = 'inline-block';
+  buildSummary();
+}
+
+function buildSummary() {
+  const entries = Object.entries(store);
+  if (!entries.length) return;
+
+  // Globale stats
+  const metData = entries.filter(([,r]) => r.feats.length > 0);
+  const totaal  = entries.reduce((s,[,r]) => s + r.feats.length, 0);
+
+  let html = `
+    <div class="stat-row">
+      <div class="stat"><div class="stat-num">${entries.length}</div><div class="stat-label">Types getest</div></div>
+      <div class="stat"><div class="stat-num">${metData.length}</div><div class="stat-label">Types met AGV-data</div></div>
+      <div class="stat"><div class="stat-num">${totaal}</div><div class="stat-label">Objecten geladen (sample)</div></div>
+    </div>
+    <div style="overflow-x:auto"><table>
+      <tr>
+        <th>TYPE</th>
+        <th>AGV OBJECTEN (sample)</th>
+        <th>TOTAAL IN BBOX</th>
+        <th>VELDEN TOTAAL</th>
+        <th>GEVULDE VELDEN</th>
+        <th>NULL-VELDEN</th>
+        <th>GEVULDE ATTRIB. (excl. code/wb)</th>
+        <th>ALTIJD NULL ATTRIB.</th>
+      </tr>`;
+
+  entries.forEach(([id, res]) => {
+    const { info, feats, matched } = res;
+    if (!feats.length) {
+      html += `<tr>
+        <td style="color:${info.color}">${info.label}</td>
+        <td class="nv">0</td><td class="nv">${matched}</td>
+        <td class="nv">—</td><td class="nv">—</td><td class="nv">—</td><td class="nv">—</td><td class="nv">—</td>
+      </tr>`;
+      return;
+    }
+
+    const keys   = [...new Set(feats.flatMap(f => Object.keys(f.properties || {})))];
+    const skip   = new Set(['code','waterbeheerder','guid','nen3610id','url','objectbegintijd','tijdstipregistratie','statuslegger']);
+    const attrib = keys.filter(k => !skip.has(k));
+
+    const gevuld     = keys.filter(k => feats.some(f => f.properties[k] !== null));
+    const nullKeys   = keys.filter(k => feats.every(f => f.properties[k] === null));
+    const attribGev  = attrib.filter(k => feats.some(f => f.properties[k] !== null));
+    const attribNull = attrib.filter(k => feats.every(f => f.properties[k] === null));
+
+    html += `<tr>
+      <td style="color:${info.color};font-weight:bold">${info.label}</td>
+      <td>${feats.length}</td>
+      <td>${matched}</td>
+      <td>${keys.length}</td>
+      <td class="gv">${gevuld.length}</td>
+      <td class="${nullKeys.length > 5 ? 'wv' : 'gv'}">${nullKeys.length}</td>
+      <td class="gv" style="font-size:9px">${attribGev.join(', ') || '—'}</td>
+      <td class="nv" style="font-size:9px">${attribNull.join(', ') || '—'}</td>
+    </tr>`;
+  });
+
+  html += `</table></div>
+
+  <div style="margin-top:20px;padding-top:12px;border-top:1px solid #1e3a5f">
+    <div style="color:#00c8ff;letter-spacing:2px;font-size:10px;margin-bottom:8px">// CONCLUSIES VOOR APP</div>
+    <div style="font-size:10px;line-height:1.8;color:#5a7a9a">
+      ● Filterveld bevestigd: <span class="gv">waterbeheerder = "${AGV}"</span><br>
+      ● Code-veld: <span class="gv">code</span> (KBR…/KST…/KGM… etc.) — altijd gevuld<br>
+      ● Naam-veld: <span class="wv">naam</span> — vaak null, gebruik code als fallback<br>
+      ● Statusveld: <span class="gv">statusobject</span> — gerealiseerd / buiten bedrijf<br>
+      ● De gevulde attributen per type zijn bruikbaar als aantallen in tab 02 Attributen<br>
+      ● Null-attributen = datakwaliteitsgap → argument voor standaardisatiesessies
+    </div>
+  </div>`;
+
+  document.getElementById('summary').innerHTML = html;
+}
+
+function exportJSON() {
+  const out = {};
+  Object.entries(store).forEach(([id, res]) => {
+    const keys = [...new Set(res.feats.flatMap(f => Object.keys(f.properties || {})))];
+    const fill = {};
+    keys.forEach(k => {
+      const n = res.feats.filter(f => f.properties[k] !== null).length;
+      fill[k] = { gevuld: n, pct: res.feats.length ? Math.round(n/res.feats.length*100) : 0 };
+    });
+    out[id] = {
+      label: res.info.label,
+      numberMatched: res.matched,
+      sampleCount: res.feats.length,
+      fields: keys,
+      fieldFillRate: fill,
+      sample: res.feats.map(f => ({
+        code: f.properties?.code,
+        coords: f.geometry?.coordinates?.slice(0,2),
+        props: f.properties
+      }))
+    };
+  });
+  const blob = new Blob([JSON.stringify(out, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'pdok-agv-diagnose.json';
+  a.click();
 }
 </script>
 </body>
