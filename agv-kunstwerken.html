@@ -1746,42 +1746,8 @@ const DEFAULT_RAMS_ATTRS = [
 ];
 
 // Analyse data
-const CONTEXT_VERDELING = [
-  { label: "Boerenland", count: 2891, pct: 48, color: "#ffb347" },
-  { label: "Woongebied", count: 1234, pct: 21, color: "#00c8ff" },
-  { label: "Afgelegen", count: 987, pct: 16, color: "#5a7a9a" },
-  { label: "Broedgebied", count: 612, pct: 10, color: "#00ff9d" },
-  { label: "Voetgangers", count: 276, pct: 5, color: "#ff4d6d" },
-];
-
-const RAMS_VERDELING = [
-  { label: "Kritisch", count: 892, pct: 15, color: "#ff4d6d" },
-  { label: "Normaal", count: 3241, pct: 54, color: "#00c8ff" },
-  { label: "Laag", count: 1867, pct: 31, color: "#5a7a9a" },
-];
-
-const BULK_MATRIX = [
-  { context: "Boerenland", rams: "Kritisch", count: 134 },
-  { context: "Boerenland", rams: "Normaal", count: 1876 },
-  { context: "Boerenland", rams: "Laag", count: 881 },
-  { context: "Woongebied", rams: "Kritisch", count: 412 },
-  { context: "Woongebied", rams: "Normaal", count: 689 },
-  { context: "Woongebied", rams: "Laag", count: 133 },
-  { context: "Broedgebied", rams: "Kritisch", count: 89 },
-  { context: "Broedgebied", rams: "Normaal", count: 345 },
-  { context: "Broedgebied", rams: "Laag", count: 178 },
-];
-
-const CONTEXT_TYPEN = ["Boerenland", "Woongebied", "Broedgebied"];
-const RAMS_TYPEN = ["Kritisch", "Normaal", "Laag"];
 
 // ─── Kleuren per type ─────────────────────────────────────────────────────────
-const TYPE_COLORS = {
-  stuw: "#00c8ff", gemaal: "#ff4d6d", duiker: "#ffb347",
-  sifon: "#fb923c", hevel: "#34d399",
-  brug: "#00ff9d", sluis: "#c084fc", afsluitmiddel: "#5a7a9a",
-  vispassage: "#f472b6", vastedam: "#fbbf24",
-};
 
 // ─── Subcomponenten ───────────────────────────────────────────────────────────
 
@@ -2163,38 +2129,6 @@ function KaartTab({ typeFilter, setTypeFilter }) {
 // Gevulde velden uit sample van 10 AGV-objecten — bron: PDOK OGC API
 
 // ─── PDOK Configuratie ───────────────────────────────────────────────────────
-const BRONHOUDERS = {
-  "W0155": {
-    label: "Amstel, Gooi en Vecht (AGV)",
-    center: [52.30, 4.95], zoom: 10,
-    bbox: "4.65,52.10,5.25,52.55",
-  },
-  "W0616": {
-    label: "Hoogheemraadschap van Rijnland",
-    center: [52.15, 4.50], zoom: 10,
-    bbox: "4.20,51.95,4.80,52.35",
-  },
-  "W0636": {
-    label: "De Stichtse Rijnlanden",
-    center: [52.05, 5.10], zoom: 10,
-    bbox: "4.80,51.85,5.45,52.25",
-  },
-};
-
-const PDOK_COLLECTIES = {
-  stuw:          "stuw",
-  gemaal:        "gemaal",
-  duiker:        "duiker",
-  sifon:         "sifon",
-  hevel:         "hevel",
-  brug:          "brug",
-  sluis:         "sluis",
-  afsluitmiddel: "afsluitmiddel",
-  vispassage:    "vispassage",
-  vastedam:      "vastedam",
-};
-
-const PDOK_BASE = "https://api.pdok.nl/hwh/waterschappen-kunstwerken-imwa/ogc/v1/collections";
 
 function detectType(collectie) {
   const map = {
@@ -2204,9 +2138,6 @@ function detectType(collectie) {
   };
   return map[collectie] || collectie;
 }
-
-
-const PDOK_BASE = "https://api.pdok.nl/hwh/waterschappen-kunstwerken-imwa/ogc/v1/collections";
 const AGV_WB   = "Waterschap Amstel, Gooi en Vecht";
 
 function detectType(collectie) {
@@ -2221,34 +2152,6 @@ function detectType(collectie) {
 }
 
 // Analyse data
-const CONTEXT_VERDELING = [
-  { label: "Boerenland", count: 2891, pct: 48, color: "#ffb347" },
-  { label: "Woongebied", count: 1234, pct: 21, color: "#00c8ff" },
-  { label: "Afgelegen", count: 987, pct: 16, color: "#5a7a9a" },
-  { label: "Broedgebied", count: 612, pct: 10, color: "#00ff9d" },
-  { label: "Voetgangers", count: 276, pct: 5, color: "#ff4d6d" },
-];
-
-const RAMS_VERDELING = [
-  { label: "Kritisch", count: 892, pct: 15, color: "#ff4d6d" },
-  { label: "Normaal", count: 3241, pct: 54, color: "#00c8ff" },
-  { label: "Laag", count: 1867, pct: 31, color: "#5a7a9a" },
-];
-
-const BULK_MATRIX = [
-  { context: "Boerenland", rams: "Kritisch", count: 134 },
-  { context: "Boerenland", rams: "Normaal", count: 1876 },
-  { context: "Boerenland", rams: "Laag", count: 881 },
-  { context: "Woongebied", rams: "Kritisch", count: 412 },
-  { context: "Woongebied", rams: "Normaal", count: 689 },
-  { context: "Woongebied", rams: "Laag", count: 133 },
-  { context: "Broedgebied", rams: "Kritisch", count: 89 },
-  { context: "Broedgebied", rams: "Normaal", count: 345 },
-  { context: "Broedgebied", rams: "Laag", count: 178 },
-];
-
-const CONTEXT_TYPEN = ["Boerenland", "Woongebied", "Broedgebied"];
-const RAMS_TYPEN = ["Kritisch", "Normaal", "Laag"];
 
 
 // ─── KaartTab met Leaflet ─────────────────────────────────────────────────────
@@ -2824,19 +2727,6 @@ function DecompositieTab({ pdokTotalen, setPdokTotalen }) {
 
 
 // ─── Analyse Tab ──────────────────────────────────────────────────────────────
-const BULK_MATRIX = [
-  { context: "Boerenland", rams: "Kritisch", count: 134 },
-  { context: "Boerenland", rams: "Normaal",  count: 1876 },
-  { context: "Boerenland", rams: "Laag",     count: 881 },
-  { context: "Woongebied", rams: "Kritisch", count: 412 },
-  { context: "Woongebied", rams: "Normaal",  count: 689 },
-  { context: "Woongebied", rams: "Laag",     count: 133 },
-  { context: "Broedgebied",rams: "Kritisch", count: 89 },
-  { context: "Broedgebied",rams: "Normaal",  count: 345 },
-  { context: "Broedgebied",rams: "Laag",     count: 178 },
-];
-const CONTEXT_TYPEN = ["Boerenland","Woongebied","Broedgebied"];
-const RAMS_TYPEN    = ["Kritisch","Normaal","Laag"];
 
 function AnalyseTab({ pdokTotalen }) {
   const [selectedCell, setSelectedCell] = useState(null);
